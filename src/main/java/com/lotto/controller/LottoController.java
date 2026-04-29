@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,24 +67,13 @@ public class LottoController {
         );
     }
 
-    /**
-     * 수동 번호 문자열을 도메인 객체로 파싱한다.
-     * 허용 구분자: 콤마, 공백, 하이픈, 세미콜론.
-     */
+    /** 입력된 수동 번호 문자열들을 도메인 객체로 변환한다. {@link LottoNumbers#parse}에 위임. */
     private static List<LottoNumbers> parseManualNumbers(List<String> raw) {
         if (raw == null || raw.isEmpty()) return List.of();
         List<LottoNumbers> parsed = new ArrayList<>(raw.size());
         for (String entry : raw) {
             if (entry == null || entry.isBlank()) continue;
-            try {
-                List<Integer> nums = Arrays.stream(entry.split("[,;\\s\\-]+"))
-                        .filter(s -> !s.isBlank())
-                        .map(Integer::parseInt)
-                        .toList();
-                parsed.add(new LottoNumbers(nums));
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("수동 번호 형식이 잘못되었습니다: " + entry);
-            }
+            parsed.add(LottoNumbers.parse(entry));
         }
         return parsed;
     }

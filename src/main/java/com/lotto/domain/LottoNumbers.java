@@ -1,5 +1,6 @@
 package com.lotto.domain;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +20,9 @@ public record LottoNumbers(List<Integer> numbers) {
     public static final int MIN = 1;
     public static final int MAX = 45;
 
+    /** 사용자 입력 문자열의 허용 구분자: 콤마, 세미콜론, 공백, 하이픈. */
+    private static final String DELIMITERS = "[,;\\s\\-]+";
+
     public LottoNumbers {
         if (numbers == null || numbers.size() != SIZE) {
             throw new IllegalArgumentException("로또 번호는 정확히 " + SIZE + "개여야 합니다.");
@@ -37,6 +41,27 @@ public record LottoNumbers(List<Integer> numbers) {
             }
         }
         numbers = numbers.stream().sorted().toList();
+    }
+
+    /**
+     * 사용자 입력 문자열을 도메인 객체로 파싱한다.
+     * 허용 구분자: 콤마, 세미콜론, 공백, 하이픈. 예) "1, 2, 3, 4, 5, 6".
+     *
+     * @throws IllegalArgumentException 빈 문자열, 숫자 형식 오류, 또는 검증 실패 시
+     */
+    public static LottoNumbers parse(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("수동 번호가 비어 있습니다.");
+        }
+        try {
+            List<Integer> nums = Arrays.stream(raw.split(DELIMITERS))
+                    .filter(s -> !s.isBlank())
+                    .map(Integer::parseInt)
+                    .toList();
+            return new LottoNumbers(nums);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("수동 번호 형식이 잘못되었습니다: " + raw);
+        }
     }
 
     public String toFormattedString() {

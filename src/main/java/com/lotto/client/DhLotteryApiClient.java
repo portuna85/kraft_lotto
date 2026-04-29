@@ -47,7 +47,7 @@ public class DhLotteryApiClient implements LottoApiClient {
                               MeterRegistry meterRegistry) {
         this.lottoRestClient = lottoRestClient;
         this.properties = properties;
-        this.retryTemplate = buildRetryTemplate();
+        this.retryTemplate = buildRetryTemplate(properties.api().retry());
         this.fetchTimer = Timer.builder("lotto.api.fetch")
                 .description("동행복권 회차 조회 latency")
                 .publishPercentiles(0.5, 0.95, 0.99)
@@ -57,15 +57,15 @@ public class DhLotteryApiClient implements LottoApiClient {
                 .register(meterRegistry);
     }
 
-    private static RetryTemplate buildRetryTemplate() {
+    private static RetryTemplate buildRetryTemplate(LottoProperties.Api.Retry retry) {
         RetryTemplate template = new RetryTemplate();
         // 네트워크/타임아웃만 재시도
-        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(3,
+        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(retry.maxAttempts(),
                 Map.of(ResourceAccessException.class, true), true);
         ExponentialBackOffPolicy backOff = new ExponentialBackOffPolicy();
-        backOff.setInitialInterval(200);
-        backOff.setMultiplier(2.0);
-        backOff.setMaxInterval(2_000);
+        backOff.setInitialInterval(retry.initialInterval().toMillis());
+        backOff.setMultiplier(retry.multiplier());
+        backOff.setMaxInterval(retry.maxInterval().toMillis());
         template.setRetryPolicy(retryPolicy);
         template.setBackOffPolicy(backOff);
         return template;

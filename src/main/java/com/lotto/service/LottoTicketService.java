@@ -1,7 +1,6 @@
 package com.lotto.service;
 
 import com.lotto.config.LottoProperties;
-import com.lotto.domain.LottoNumberGenerator;
 import com.lotto.domain.LottoNumbers;
 import com.lotto.domain.LottoTicket;
 import com.lotto.domain.PickMode;
@@ -22,30 +21,15 @@ import java.util.List;
  * 영수증(티켓) 생성 서비스 (SRP).
  * - 게임별 수동/자동 모드 결정
  * - 회차/일자/영수증번호/합계 계산
+ *
+ * <p>자동 픽 생성은 {@link LottoService} 단일 진입점에 위임하여 일관성을 유지한다.</p>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class LottoTicketService {
 
-    /**
-     * 게임 라벨 생성: A, B, ..., Z, AA, AB, ..., ZZ (총 26*27 = 702개 지원)
-     * 동행복권 영수증 표기 규칙(A~AX 등)을 일반화.
-     */
-    static String labelFor(int index) {
-        if (index < 0 || index >= 26 * 27) {
-            throw new IllegalArgumentException("게임 라벨 생성 가능 범위(0~701)를 벗어났습니다: " + index);
-        }
-        if (index < 26) {
-            return String.valueOf((char) ('A' + index));
-        }
-        int firstIdx = index / 26 - 1; // 26→AA(firstIdx=0), 52→BA(firstIdx=1), ...
-        int secondIdx = index % 26;
-        return "" + (char) ('A' + firstIdx) + (char) ('A' + secondIdx);
-    }
-
     private final LottoService lottoService;
-    private final LottoNumberGenerator lottoNumberGenerator;
     private final ReceiptNumberGenerator receiptNumberGenerator;
     private final LottoProperties properties;
 
@@ -83,18 +67,14 @@ public class LottoTicketService {
 
         int autoCount = totalGames - manualSupplied;
 
-        // 1) 자동 번호 생성 - 역대 당첨 회피 옵션
+        // 1) 자동 번호 생성 - LottoService 단일 진입점에 위임
         List<LottoNumbers> autoPicks;
         int latestRound;
         if (autoCount == 0) {
             autoPicks = List.of();
             latestRound = 0;
-        } else if (skipHistory) {
-            autoPicks = new ArrayList<>(autoCount);
-            for (int i = 0; i < autoCount; i++) autoPicks.add(lottoNumberGenerator.generate());
-            latestRound = 0; // 미조회
         } else {
-            var result = lottoService.generateUnique(autoCount);
+            var result = lottoService.generate(autoCount, skipHistory);
             autoPicks = new ArrayList<>(result.generated());
             latestRound = result.latestDraw();
         }
@@ -107,7 +87,7 @@ public class LottoTicketService {
         // 3) 게임 라벨/모드 부여 (앞쪽 manual 개를 수동 라벨로)
         List<TicketGame> games = new ArrayList<>(totalGames);
         for (int i = 0; i < totalGames; i++) {
-            String label = labelFor(i);
+            String label = TicketGame.labelFor(i);
             PickMode mode = (i < manual) ? PickMode.MANUAL : PickMode.AUTO;
             games.add(new TicketGame(label, mode, picked.get(i)));
         }
@@ -135,11 +115,6 @@ public class LottoTicketService {
                 unit,
                 total
         );
-    }
-
-    /** 기존 시그니처 호환 (수동 번호 미지원). */
-    public LottoTicket issue(int totalGames, Integer manualGames, boolean skipHistory) {
-        return issue(totalGames, manualGames, null, skipHistory);
     }
 
     private LocalDate nextSaturday(LocalDate base) {

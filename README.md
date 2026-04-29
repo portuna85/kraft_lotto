@@ -168,13 +168,13 @@ manager.registerCustomCache("latestDraw",
 
 ### 🧵 Virtual Threads + Semaphore 기반 fan-out
 
-역대 당첨번호 수집 시 회차별로 가상 스레드를 할당하되, **Semaphore(50)** 으로 외부 API 동시 요청 수를 제한하여 동행복권 서버 과부하를 방지합니다.
+역대 당첨번호 수집 시 회차별로 가상 스레드를 할당하되, **`Semaphore(lotto.api.max-concurrent)`** 로 외부 API 동시 요청 수를 제한하여 동행복권 서버 과부하를 방지합니다.
 
 ```text
 LottoHistoryFetcher
   └─ Executors.newVirtualThreadPerTaskExecutor()
-       ├─ Semaphore(MAX_CONCURRENT = 50)  ← 동시성 제어
-       └─ @Cacheable(lottoDraws, 7일)     ← 재호출 비용 제거
+       ├─ Semaphore(lotto.api.max-concurrent = 50)  ← 설정 외부화된 동시성 제어
+       └─ @Cacheable(lottoDraws, 7일)               ← 재호출 비용 제거
 ```
 
 > 가상 스레드는 1,000개 이상 생성해도 부담이 없지만, 외부 API 서버 보호를 위해 동시 호출 수는 별도 제한합니다.
@@ -258,8 +258,9 @@ com.lotto
 ├── service/
 │   ├── LottoDrawFinder           # 최신 회차 이진 탐색 + @Cacheable(latestDraw, 30분)
 │   ├── LottoHistoryFetcher       # 역대 당첨번호 fan-out 수집, Set.copyOf() 반환
-│   ├── LottoService              # 고유 번호 생성 Facade @Service
-│   └── LottoTicketService        # 티켓 발권 @Service
+│   ├── LottoHistoryCache         # 역대 당첨번호 Set 캐시 + @Cacheable(historyWinners, 7일)
+│   ├── LottoService              # 번호 생성 단일 진입점 (skipHistory 통합) @Service
+│   └── LottoTicketService        # 티켓 발권 @Service (자동 픽은 LottoService 위임)
 │
 └── controller/
     ├── LottoController           # REST 엔드포인트, Optional.ofNullable 기본값 처리
@@ -297,8 +298,15 @@ server:
 lotto:
   api:
     base-url: https://www.dhlottery.co.kr/common.do
+    method: getLottoNumber
     connect-timeout: 3s
     read-timeout: 5s
+    max-concurrent: 50      # fan-out 시 동행복권 API 동시 요청 수 한도
+    retry:
+      max-attempts: 3
+      initial-interval: 200ms
+      multiplier: 2.0
+      max-interval: 2s
   draw:
     search-start: 1100     # 탐색 시작 회차 (이 값 미만은 항상 유효하다고 가정)
     search-step: 100
