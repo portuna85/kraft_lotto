@@ -14,17 +14,30 @@ function ballClass(n) {
     return 'ball-g';
 }
 
+function parseManualNumbersText(text) {
+    if (!text) return [];
+    return text.split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+}
+
 function getInputs() {
     const games  = Math.min(50, Math.max(1, parseInt($('games-input').value,  10) || 5));
     const manual = Math.min(games, Math.max(0, parseInt($('manual-input').value, 10) || 0));
-    return { games, manual };
+    const manualNumbers = parseManualNumbersText($('manual-numbers').value);
+    return { games, manual, manualNumbers };
 }
 
-async function fetchTicket(games, manual) {
+async function fetchTicket({ games, manual, manualNumbers }) {
     if (currentRequest) currentRequest.abort();
     currentRequest = new AbortController();
 
-    const params = new URLSearchParams({ games, manual, skipHistory: 'true' });
+    const params = new URLSearchParams();
+    params.append('games', games);
+    params.append('manual', manual);
+    params.append('skipHistory', 'true');
+    for (const line of manualNumbers) params.append('manualNumbers', line);
+
     const res = await fetch('/api/lotto/ticket?' + params, {
         headers: { Accept: 'application/json' },
         signal: currentRequest.signal,
@@ -32,7 +45,7 @@ async function fetchTicket(games, manual) {
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'HTTP ' + res.status);
+        throw new Error(err.detail || ('HTTP ' + res.status));
     }
     return res.json();
 }
@@ -66,6 +79,27 @@ function renderGames(games) {
     ul.appendChild(fragment);
 }
 
+function renderSkeleton(count) {
+    const ul = $('games');
+    ul.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    const n = Math.max(1, Math.min(8, count || 5));
+    for (let i = 0; i < n; i++) {
+        const li = document.createElement('li');
+        li.className = 'game game--skeleton';
+        const label = document.createElement('span');
+        label.className = 'game__label skeleton-block';
+        li.appendChild(label);
+        for (let j = 0; j < 6; j++) {
+            const cell = document.createElement('span');
+            cell.className = 'game__num skeleton-circle';
+            li.appendChild(cell);
+        }
+        fragment.appendChild(li);
+    }
+    ul.appendChild(fragment);
+}
+
 function render(t) {
     $('round').textContent       = (t.round > 0 ? t.round : '-') + '회';
     $('issuedAt').textContent    = t.issuedAt;
@@ -87,23 +121,22 @@ function setLoading(on) {
 }
 
 function showError(msg) {
-    const el = $('error-msg');
-    el.textContent = msg;
-    el.hidden = false;
+    $('error-text').textContent = msg;
+    $('error-msg').hidden = false;
 }
 
 function clearError() {
-    const el = $('error-msg');
-    el.textContent = '';
-    el.hidden = true;
+    $('error-text').textContent = '';
+    $('error-msg').hidden = true;
 }
 
 async function load() {
     clearError();
+    const inputs = getInputs();
     setLoading(true);
+    renderSkeleton(inputs.games);
     try {
-        const { games, manual } = getInputs();
-        render(await fetchTicket(games, manual));
+        render(await fetchTicket(inputs));
     } catch (e) {
         if (e.name !== 'AbortError') {
             showError('티켓 발급 실패: ' + e.message);
@@ -121,9 +154,14 @@ function scheduleReload() {
 
 document.addEventListener('DOMContentLoaded', () => {
     $('btn-reload').addEventListener('click', load);
-    $('btn-close').addEventListener('click', () => window.close());
+    $('btn-retry').addEventListener('click', load);
+    $('btn-close').addEventListener('click', () => {
+        // window.close()는 대부분 브라우저에서 차단되므로 섹션 숨김으로 대체
+        $('ticket').style.display = 'none';
+    });
     $('btn-print').addEventListener('click', () => window.print());
     $('games-input').addEventListener('input', scheduleReload);
     $('manual-input').addEventListener('input', scheduleReload);
+    $('manual-numbers').addEventListener('input', scheduleReload);
     load();
 });

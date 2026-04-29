@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -42,13 +45,48 @@ public class LottoController {
         );
     }
 
+    /**
+     * 영수증(티켓) 발권.
+     *
+     * @param games 총 게임 수
+     * @param manual 수동 라벨 게임 수(수동 번호 직접 입력 시 무시되고 입력 수가 우선)
+     * @param manualNumbers 수동 입력 번호 목록. 각 항목은 6개 정수 콤마/공백 구분.
+     *                      예) {@code ?manualNumbers=1,2,3,4,5,6&manualNumbers=7,8,9,10,11,12}
+     * @param skipHistory true(기본) 면 역대 당첨 미조회로 빠른 발권
+     */
     @GetMapping("/ticket")
     public TicketResponse issueTicket(
             @RequestParam(required = false) @Min(1) @Max(50) Integer games,
             @RequestParam(required = false) @Min(0) @Max(50) Integer manual,
+            @RequestParam(required = false) List<String> manualNumbers,
             @RequestParam(required = false, defaultValue = "true") boolean skipHistory
     ) {
         int total = Optional.ofNullable(games).orElseGet(() -> properties.generator().defaultCount());
-        return TicketResponse.from(lottoTicketService.issue(total, manual, skipHistory));
+        List<LottoNumbers> manualParsed = parseManualNumbers(manualNumbers);
+        return TicketResponse.from(
+                lottoTicketService.issue(total, manual, manualParsed, skipHistory)
+        );
+    }
+
+    /**
+     * 수동 번호 문자열을 도메인 객체로 파싱한다.
+     * 허용 구분자: 콤마, 공백, 하이픈, 세미콜론.
+     */
+    private static List<LottoNumbers> parseManualNumbers(List<String> raw) {
+        if (raw == null || raw.isEmpty()) return List.of();
+        List<LottoNumbers> parsed = new ArrayList<>(raw.size());
+        for (String entry : raw) {
+            if (entry == null || entry.isBlank()) continue;
+            try {
+                List<Integer> nums = Arrays.stream(entry.split("[,;\\s\\-]+"))
+                        .filter(s -> !s.isBlank())
+                        .map(Integer::parseInt)
+                        .toList();
+                parsed.add(new LottoNumbers(nums));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("수동 번호 형식이 잘못되었습니다: " + entry);
+            }
+        }
+        return parsed;
     }
 }

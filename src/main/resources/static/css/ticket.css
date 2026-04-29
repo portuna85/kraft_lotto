@@ -219,6 +219,63 @@ body {
     color: #842029;
     font-size: 13px;
     line-height: 1.5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ticket__error-retry {
+    margin-left: auto;
+    padding: 4px 10px;
+    background: #842029;
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.ticket__error-retry:hover { background: #6a161d; }
+
+/* 스켈레톤 (로딩 중) */
+@keyframes ticket-skeleton-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 0.95; }
+}
+.skeleton-block,
+.skeleton-circle {
+    background: linear-gradient(90deg, #ececec 0%, #f6f6f6 50%, #ececec 100%);
+    background-size: 200% 100%;
+    animation: ticket-skeleton-pulse 1.2s ease-in-out infinite;
+    box-shadow: none !important;
+    color: transparent !important;
+}
+.skeleton-block { height: 14px; width: 80%; border-radius: 3px; }
+.skeleton-circle { background-color: #ececec; }
+.game--skeleton { pointer-events: none; }
+
+/* 고급 입력 영역 */
+.ticket__advanced {
+    width: 100%;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #555;
+}
+.ticket__advanced summary {
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+    color: #1976d2;
+}
+.ticket__advanced-hint { margin: 4px 0; color: #888; font-size: 11px; }
+.ticket__advanced textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: "Menlo", "Consolas", monospace;
+    font-size: 12px;
+    resize: vertical;
+    box-sizing: border-box;
 }
 
 /* 컨트롤 */

@@ -20,12 +20,12 @@ import java.util.Set;
 public class LottoService {
 
     private final LottoDrawFinder lottoDrawFinder;
-    private final LottoHistoryFetcher lottoHistoryFetcher;
+    private final LottoHistoryCache lottoHistoryCache;
     private final LottoNumberGenerator lottoNumberGenerator;
 
     public GenerationResult generateUnique(int count) {
         int latestDraw = lottoDrawFinder.findLatestDraw();
-        Set<LottoNumbers> historicalWinners = lottoHistoryFetcher.fetchAllWinners(latestDraw);
+        Set<LottoNumbers> historicalWinners = lottoHistoryCache.getOrFetch(latestDraw);
         List<LottoNumbers> generated = generateUnique(count, historicalWinners);
         return new GenerationResult(latestDraw, historicalWinners.size(), generated);
     }

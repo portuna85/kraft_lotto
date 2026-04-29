@@ -53,10 +53,15 @@ public class LottoTicketService {
      * 티켓을 발권한다.
      *
      * @param totalGames 총 게임 수 (예: 5)
-     * @param manualGames 수동 게임 수 (총합 이하). null/음수면 0
+     * @param manualLabelCount 수동 라벨로 표시할 게임 수 (총합 이하). null/음수면 0.
+     *                         {@code manualNumbers}가 제공되면 그 크기로 강제된다.
+     * @param manualNumbers 사용자가 직접 입력한 수동 번호 목록(앞쪽 슬롯에 배치). null 가능.
      * @param skipHistory true 면 역대 당첨번호 조회를 건너뛰고 단순 무작위 생성
      */
-    public LottoTicket issue(int totalGames, Integer manualGames, boolean skipHistory) {
+    public LottoTicket issue(int totalGames,
+                             Integer manualLabelCount,
+                             List<LottoNumbers> manualNumbers,
+                             boolean skipHistory) {
         if (totalGames < 1) {
             throw new IllegalArgumentException("게임 수는 1 이상이어야 합니다.");
         }
@@ -64,25 +69,42 @@ public class LottoTicketService {
         if (totalGames > max) {
             throw new IllegalArgumentException("게임 수는 " + max + " 이하여야 합니다.");
         }
-        int manual = (manualGames == null || manualGames < 0) ? 0 : manualGames;
+
+        int manualSupplied = manualNumbers == null ? 0 : manualNumbers.size();
+        if (manualSupplied > totalGames) {
+            throw new IllegalArgumentException("수동 입력 번호 수가 총 게임 수를 초과했습니다.");
+        }
+        int manual = manualSupplied > 0
+                ? manualSupplied
+                : ((manualLabelCount == null || manualLabelCount < 0) ? 0 : manualLabelCount);
         if (manual > totalGames) {
             throw new IllegalArgumentException("수동 수는 총 게임 수를 초과할 수 없습니다.");
         }
 
-        // 1) 번호 생성 - 역대 당첨 회피 옵션
-        List<LottoNumbers> picked;
+        int autoCount = totalGames - manualSupplied;
+
+        // 1) 자동 번호 생성 - 역대 당첨 회피 옵션
+        List<LottoNumbers> autoPicks;
         int latestRound;
-        if (skipHistory) {
-            picked = new ArrayList<>(totalGames);
-            for (int i = 0; i < totalGames; i++) picked.add(lottoNumberGenerator.generate());
+        if (autoCount == 0) {
+            autoPicks = List.of();
+            latestRound = 0;
+        } else if (skipHistory) {
+            autoPicks = new ArrayList<>(autoCount);
+            for (int i = 0; i < autoCount; i++) autoPicks.add(lottoNumberGenerator.generate());
             latestRound = 0; // 미조회
         } else {
-            var result = lottoService.generateUnique(totalGames);
-            picked = new ArrayList<>(result.generated());
+            var result = lottoService.generateUnique(autoCount);
+            autoPicks = new ArrayList<>(result.generated());
             latestRound = result.latestDraw();
         }
 
-        // 2) 게임 라벨/모드 부여 (앞쪽 manual 개를 수동으로)
+        // 2) 슬롯 배치: 앞쪽 manualSupplied 게임은 사용자 입력, 뒤쪽은 자동
+        List<LottoNumbers> picked = new ArrayList<>(totalGames);
+        if (manualNumbers != null) picked.addAll(manualNumbers);
+        picked.addAll(autoPicks);
+
+        // 3) 게임 라벨/모드 부여 (앞쪽 manual 개를 수동 라벨로)
         List<TicketGame> games = new ArrayList<>(totalGames);
         for (int i = 0; i < totalGames; i++) {
             String label = labelFor(i);
@@ -90,17 +112,17 @@ public class LottoTicketService {
             games.add(new TicketGame(label, mode, picked.get(i)));
         }
 
-        // 3) 회차/일자
+        // 4) 회차/일자
         LocalDateTime issuedAt = LocalDateTime.now().withNano(0);
         int nextRound = latestRound > 0 ? latestRound + 1 : 0;
         LocalDate drawDate = nextSaturday(issuedAt.toLocalDate());
         LocalDate claimDeadline = drawDate.plusDays(properties.ticket().claimValidityDays());
 
-        // 4) 가격
+        // 5) 가격
         int unit = properties.ticket().pricePerGame();
         int total = unit * totalGames;
 
-        // 5) 영수증 번호
+        // 6) 영수증 번호
         String receipt = receiptNumberGenerator.generate();
 
         return new LottoTicket(
@@ -113,6 +135,11 @@ public class LottoTicketService {
                 unit,
                 total
         );
+    }
+
+    /** 기존 시그니처 호환 (수동 번호 미지원). */
+    public LottoTicket issue(int totalGames, Integer manualGames, boolean skipHistory) {
+        return issue(totalGames, manualGames, null, skipHistory);
     }
 
     private LocalDate nextSaturday(LocalDate base) {

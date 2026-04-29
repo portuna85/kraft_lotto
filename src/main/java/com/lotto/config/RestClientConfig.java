@@ -49,6 +49,12 @@ public class RestClientConfig {
                         .maximumSize(1)
                         .expireAfterWrite(Duration.ofMinutes(30))
                         .build());
+        // 역대 당첨번호 Set 캐시 (latestDraw 키) → 회차 변경 시까지 유지
+        manager.registerCustomCache("historyWinners",
+                Caffeine.newBuilder()
+                        .maximumSize(8) // 최근 N개 회차의 Set 만 유지
+                        .expireAfterWrite(Duration.ofDays(7))
+                        .build());
         return manager;
     }
 }

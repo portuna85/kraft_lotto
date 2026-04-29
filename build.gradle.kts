@@ -25,6 +25,10 @@ dependencies {
 
     implementation("com.github.ben-manes.caffeine:caffeine")
 
+    // Resilience: 외부 API 일시 장애 재시도
+    implementation("org.springframework.retry:spring-retry:2.0.10")
+    implementation("org.springframework:spring-aspects")
+
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

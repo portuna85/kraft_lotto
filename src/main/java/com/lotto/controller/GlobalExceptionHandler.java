@@ -4,8 +4,11 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.net.URI;
 import java.util.stream.Collectors;
@@ -35,6 +38,26 @@ public class GlobalExceptionHandler {
             detail = e.getMessage();
         }
         return problem(HttpStatus.BAD_REQUEST, "유효성 검사 실패", detail, "lotto/validation");
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        String required = e.getRequiredType() == null ? "?" : e.getRequiredType().getSimpleName();
+        String detail = "파라미터 '" + e.getName() + "' 의 형식이 올바르지 않습니다. (요구 타입: " + required + ")";
+        return problem(HttpStatus.BAD_REQUEST, "파라미터 형식 오류", detail, "lotto/type-mismatch");
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ProblemDetail handleMissingParam(MissingServletRequestParameterException e) {
+        return problem(HttpStatus.BAD_REQUEST, "필수 파라미터 누락",
+                "필수 파라미터 '" + e.getParameterName() + "' 가 누락되었습니다.",
+                "lotto/missing-parameter");
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail handleNotReadable(HttpMessageNotReadableException e) {
+        return problem(HttpStatus.BAD_REQUEST, "요청 본문 파싱 실패",
+                "요청 본문을 읽을 수 없습니다.", "lotto/malformed-body");
     }
 
     @ExceptionHandler(IllegalStateException.class)

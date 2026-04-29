@@ -11,7 +11,7 @@
     <section class="ticket" id="ticket" aria-live="polite" aria-busy="false">
         <header class="ticket__header">
             <h1 class="ticket__title">로또6/45 티켓 보기</h1>
-            <button class="ticket__close" type="button" id="btn-close" aria-label="닫기">×</button>
+            <button class="ticket__close" type="button" id="btn-close" aria-label="티켓 숨기기">×</button>
         </header>
 
         <div class="ticket__brand">
@@ -41,7 +41,10 @@
 
         <p class="ticket__receipt ticket__receipt--bottom" id="receiptBottom">-</p>
 
-        <div role="alert" class="ticket__error" id="error-msg" hidden></div>
+        <div role="alert" class="ticket__error" id="error-msg" hidden>
+            <span id="error-text"></span>
+            <button type="button" id="btn-retry" class="ticket__error-retry">다시 시도</button>
+        </div>
 
         <div class="ticket__controls no-print">
             <label>
@@ -49,9 +52,14 @@
                 <input type="number" id="games-input" min="1" max="50" value="5" />
             </label>
             <label>
-                수동
+                수동 라벨
                 <input type="number" id="manual-input" min="0" max="50" value="0" />
             </label>
+            <details class="ticket__advanced">
+                <summary>수동 번호 직접 입력</summary>
+                <p class="ticket__advanced-hint">한 줄에 한 게임. 6개 번호를 콤마/공백으로 구분.</p>
+                <textarea id="manual-numbers" rows="3" placeholder="1, 2, 3, 4, 5, 6&#10;7, 8, 9, 10, 11, 12"></textarea>
+            </details>
             <div class="ticket__controls-actions">
                 <button type="button" id="btn-reload" aria-busy="false">새로 발권</button>
                 <button type="button" id="btn-print" class="btn-secondary">인쇄</button>

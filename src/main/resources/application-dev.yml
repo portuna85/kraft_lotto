@@ -1,0 +1,17 @@
+## dev 프로파일: 로컬 개발 편의 우선
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, beans, env, mappings, caches, loggers
+
+logging:
+  level:
+    root: INFO
+    com.lotto: DEBUG
+    org.springframework.web: INFO
+    org.springframework.cache: DEBUG
+

@@ -1,6 +1,8 @@
 spring:
   application:
     name: lotto-generator
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   threads:
     virtual:
       enabled: true
@@ -21,14 +23,6 @@ management:
     web:
       exposure:
         include: health, info, metrics
-  endpoint:
-    health:
-      show-details: when_authorized
-
-logging:
-  level:
-    root: INFO
-    com.lotto: DEBUG
 
 lotto:
   api:
