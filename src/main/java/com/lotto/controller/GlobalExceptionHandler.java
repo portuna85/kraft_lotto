@@ -9,6 +9,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.URI;
 import java.util.stream.Collectors;
@@ -63,6 +64,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ProblemDetail handleIllegalState(IllegalStateException e) {
         return problem(HttpStatus.CONFLICT, "처리 불가", e.getMessage(), "lotto/conflict");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ProblemDetail handleNoResource(NoResourceFoundException e) {
+        log.debug("정적 리소스 없음: {}", e.getResourcePath());
+        return problem(HttpStatus.NOT_FOUND, "리소스 없음",
+                "요청한 리소스를 찾을 수 없습니다.", "lotto/not-found");
     }
 
     @ExceptionHandler(Exception.class)
