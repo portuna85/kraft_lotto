@@ -24,6 +24,12 @@ management:
       exposure:
         include: health, info, metrics
 
+# Logback 설정은 logback-spring.xml 에서 레벨별 파일/롤링까지 통합 관리
+# 여기서는 출력 경로 변수만 노출(환경별 override 가능)
+logging:
+  file:
+    path: logs
+
 lotto:
   api:
     base-url: https://www.dhlottery.co.kr/common.do
