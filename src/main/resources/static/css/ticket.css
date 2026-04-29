@@ -1,0 +1,275 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+                 "Malgun Gothic", "맑은 고딕", "Noto Sans KR", sans-serif;
+    background: #e8eef3;
+    color: #222;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* 키보드 포커스 링 */
+:focus-visible {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 12px;
+}
+
+/* 영수증 본체 */
+.ticket {
+    width: 100%;
+    max-width: 380px;
+    background: #fff;
+    position: relative;
+    padding: 22px 22px 26px;
+    --tooth: 8px;
+    -webkit-mask:
+        radial-gradient(circle var(--tooth) at var(--tooth) 0,
+            transparent 98%, #000 100%) top / calc(var(--tooth) * 2) var(--tooth) repeat-x,
+        radial-gradient(circle var(--tooth) at var(--tooth) 100%,
+            transparent 98%, #000 100%) bottom / calc(var(--tooth) * 2) var(--tooth) repeat-x,
+        linear-gradient(#000, #000) center / 100% calc(100% - var(--tooth) * 2) no-repeat;
+    mask:
+        radial-gradient(circle var(--tooth) at var(--tooth) 0,
+            transparent 98%, #000 100%) top / calc(var(--tooth) * 2) var(--tooth) repeat-x,
+        radial-gradient(circle var(--tooth) at var(--tooth) 100%,
+            transparent 98%, #000 100%) bottom / calc(var(--tooth) * 2) var(--tooth) repeat-x,
+        linear-gradient(#000, #000) center / 100% calc(100% - var(--tooth) * 2) no-repeat;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transition: opacity 0.15s ease;
+}
+
+.ticket[aria-busy="true"] { opacity: 0.6; pointer-events: none; }
+
+/* 헤더 */
+.ticket__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 8px;
+}
+.ticket__title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    color: #2a2a2a;
+}
+.ticket__close {
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+.ticket__close:hover { color: #111; background: #f0f0f0; }
+
+/* 브랜드 영역 */
+.ticket__brand {
+    text-align: center;
+    margin: 6px 0 18px;
+}
+.ticket__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 24px;
+    font-weight: 800;
+    color: #2c2c2c;
+}
+.ticket__logo-mark {
+    filter: hue-rotate(-10deg);
+}
+.ticket__logo-text {
+    background: linear-gradient(90deg, #ff6a00, #ffcc00 30%, #4caf50 60%, #2196f3);
+    -webkit-background-clip: text;
+            background-clip: text;
+    color: transparent;
+}
+.ticket__logo-text sup {
+    font-size: 12px;
+    margin-left: 2px;
+    color: #2c2c2c;
+    -webkit-text-fill-color: #2c2c2c;
+}
+.ticket__round {
+    margin-top: 6px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+/* 메타정보 */
+.ticket__meta {
+    margin: 14px 0 12px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 4px;
+    font-size: 13px;
+    color: #555;
+}
+.ticket__meta > div {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    align-items: center;
+}
+.ticket__meta dt { color: #888; font-weight: 500; }
+.ticket__meta dd {
+    margin: 0;
+    color: #333;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 영수증 번호 */
+.ticket__receipt {
+    margin: 10px 0 0;
+    padding: 8px 0;
+    font-family: "Menlo", "Consolas", "D2Coding", monospace;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    color: #222;
+    border-top: 1px dashed #ccc;
+    border-bottom: 1px dashed #ccc;
+    text-align: left;
+}
+.ticket__receipt--bottom {
+    margin-top: 14px;
+    border-bottom: none;
+}
+
+/* 게임 라인 */
+.ticket__games {
+    list-style: none;
+    margin: 6px 0 14px;
+    padding: 0;
+}
+.game {
+    display: grid;
+    grid-template-columns: 56px repeat(6, 1fr);
+    align-items: center;
+    padding: 10px 0;
+    font-size: 15px;
+    color: #1a1a1a;
+}
+.game + .game { border-top: 1px solid #f0f0f0; }
+.game__label {
+    font-weight: 600;
+    color: #444;
+}
+.game__label small {
+    margin-left: 4px;
+    font-size: 12px;
+    color: #777;
+    font-weight: 500;
+}
+.game__num {
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 합계 */
+.ticket__total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 14px 0 6px;
+    border-top: 1px solid #eee;
+}
+.ticket__total-label { font-size: 15px; color: #444; }
+.ticket__total-value strong {
+    font-size: 28px;
+    font-weight: 800;
+    color: #111;
+    font-variant-numeric: tabular-nums;
+}
+.ticket__total-value em {
+    font-style: normal;
+    font-size: 16px;
+    margin-left: 4px;
+    color: #333;
+}
+
+/* 에러 메시지 */
+.ticket__error {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #fff0f0;
+    border: 1px solid #f5c2c7;
+    border-radius: 6px;
+    color: #842029;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* 컨트롤 */
+.ticket__controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px dashed #ddd;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: #555;
+}
+.ticket__controls label { display: flex; align-items: center; gap: 4px; }
+.ticket__controls input {
+    width: 56px;
+    padding: 5px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+}
+.ticket__controls input:focus-visible {
+    border-color: #1976d2;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.25);
+}
+.ticket__controls-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+}
+.ticket__controls button {
+    padding: 6px 14px;
+    border: 1px solid #1976d2;
+    background: #1976d2;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+.ticket__controls button:hover:not(:disabled) { background: #1565c0; border-color: #1565c0; }
+.ticket__controls button:active:not(:disabled) { background: #0d47a1; border-color: #0d47a1; }
+.ticket__controls button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.btn-secondary {
+    background: #fff !important;
+    color: #1976d2 !important;
+}
+.btn-secondary:hover:not(:disabled) { background: #e3f2fd !important; }
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: #fff; }
+    .ticket { box-shadow: none; }
+}

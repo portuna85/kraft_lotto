@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: lotto-generator
+  threads:
+    virtual:
+      enabled: true
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      indent-output: false
+  cache:
+    type: simple
+    cache-names:
+      - lottoDraws
+
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,application/problem+json
+    min-response-size: 1024
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+logging:
+  level:
+    root: INFO
+    com.lotto: DEBUG
+
+lotto:
+  api:
+    base-url: https://www.dhlottery.co.kr/common.do
+    method: getLottoNumber
+    connect-timeout: 3s
+    read-timeout: 5s
+  draw:
+    search-start: 1100
+    search-step: 100
+  generator:
+    default-count: 5
+    max-count: 50
+    number-min: 1
+    number-max: 45
+    pick-size: 6
+  ticket:
+    price-per-game: 1000
+    claim-validity-days: 365

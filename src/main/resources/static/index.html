@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>로또6/45 티켓 보기</title>
+    <link rel="stylesheet" href="/css/ticket.css" />
+</head>
+<body>
+<main class="page">
+    <section class="ticket" id="ticket" aria-live="polite" aria-busy="false">
+        <header class="ticket__header">
+            <h1 class="ticket__title">로또6/45 티켓 보기</h1>
+            <button class="ticket__close" type="button" id="btn-close" aria-label="닫기">×</button>
+        </header>
+
+        <div class="ticket__brand">
+            <div class="ticket__logo">
+                <span class="ticket__logo-mark" aria-hidden="true">🎟️</span>
+                <span class="ticket__logo-text">Lotto<sup>6/45</sup></span>
+            </div>
+            <div class="ticket__round" id="round">-회</div>
+        </div>
+
+        <dl class="ticket__meta">
+            <div><dt>발행일</dt><dd id="issuedAt">-</dd></div>
+            <div><dt>추첨일</dt><dd id="drawDate">-</dd></div>
+            <div><dt>지급기한</dt><dd id="claimDeadline">-</dd></div>
+        </dl>
+
+        <p class="ticket__receipt" id="receiptTop">-</p>
+
+        <ul class="ticket__games" id="games" aria-label="게임 목록"></ul>
+
+        <div class="ticket__total">
+            <span class="ticket__total-label">합계</span>
+            <span class="ticket__total-value">
+                <strong id="totalPrice">0</strong><em id="currency">원</em>
+            </span>
+        </div>
+
+        <p class="ticket__receipt ticket__receipt--bottom" id="receiptBottom">-</p>
+
+        <div role="alert" class="ticket__error" id="error-msg" hidden></div>
+
+        <div class="ticket__controls no-print">
+            <label>
+                게임 수
+                <input type="number" id="games-input" min="1" max="50" value="5" />
+            </label>
+            <label>
+                수동
+                <input type="number" id="manual-input" min="0" max="50" value="0" />
+            </label>
+            <div class="ticket__controls-actions">
+                <button type="button" id="btn-reload" aria-busy="false">새로 발권</button>
+                <button type="button" id="btn-print" class="btn-secondary">인쇄</button>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script src="/js/ticket.js" defer></script>
+</body>
+</html>
