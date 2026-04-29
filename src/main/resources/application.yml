@@ -30,6 +30,12 @@ lotto:
     method: getLottoNumber
     connect-timeout: 3s
     read-timeout: 5s
+    max-concurrent: 50
+    retry:
+      max-attempts: 3
+      initial-interval: 200ms
+      multiplier: 2.0
+      max-interval: 2s
   draw:
     search-start: 1100
     search-step: 100

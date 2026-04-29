@@ -19,7 +19,9 @@ class LottoDrawFinderTest {
 
     private static LottoProperties props(int searchStart, int searchStep) {
         return new LottoProperties(
-                new LottoProperties.Api("http://x", "m", Duration.ofSeconds(1), Duration.ofSeconds(1)),
+                new LottoProperties.Api("http://x", "m",
+                        Duration.ofSeconds(1), Duration.ofSeconds(1), 50,
+                        new LottoProperties.Api.Retry(3, Duration.ofMillis(200), 2.0, Duration.ofSeconds(2))),
                 new LottoProperties.Draw(searchStart, searchStep),
                 new LottoProperties.Generator(5, 50, 1, 45, 6),
                 new LottoProperties.Ticket(1000, 365)

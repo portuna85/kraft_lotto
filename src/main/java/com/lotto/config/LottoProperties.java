@@ -21,8 +21,17 @@ public record LottoProperties(
             @NotBlank String baseUrl,
             @NotBlank String method,
             @NotNull Duration connectTimeout,
-            @NotNull Duration readTimeout
-    ) {}
+            @NotNull Duration readTimeout,
+            @Min(1) int maxConcurrent,
+            @Valid @NotNull Retry retry
+    ) {
+        public record Retry(
+                @Min(1) int maxAttempts,
+                @NotNull Duration initialInterval,
+                @Min(1) double multiplier,
+                @NotNull Duration maxInterval
+        ) {}
+    }
 
     public record Draw(
             @Min(1) int searchStart,

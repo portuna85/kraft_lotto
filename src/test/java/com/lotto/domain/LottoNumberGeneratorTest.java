@@ -12,7 +12,9 @@ class LottoNumberGeneratorTest {
 
     private static LottoProperties props(int min, int max, int pick) {
         return new LottoProperties(
-                new LottoProperties.Api("http://x", "m", Duration.ofSeconds(1), Duration.ofSeconds(1)),
+                new LottoProperties.Api("http://x", "m",
+                        Duration.ofSeconds(1), Duration.ofSeconds(1), 50,
+                        new LottoProperties.Api.Retry(3, Duration.ofMillis(200), 2.0, Duration.ofSeconds(2))),
                 new LottoProperties.Draw(1, 1),
                 new LottoProperties.Generator(5, 50, min, max, pick),
                 new LottoProperties.Ticket(1000, 365)

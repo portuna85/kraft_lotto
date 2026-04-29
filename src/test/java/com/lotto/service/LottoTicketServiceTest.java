@@ -1,7 +1,6 @@
 package com.lotto.service;
 
 import com.lotto.config.LottoProperties;
-import com.lotto.domain.LottoNumberGenerator;
 import com.lotto.domain.LottoNumbers;
 import com.lotto.domain.LottoTicket;
 import com.lotto.domain.PickMode;
@@ -15,18 +14,21 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
 class LottoTicketServiceTest {
 
     private LottoService lottoService;
-    private LottoNumberGenerator generator;
     private ReceiptNumberGenerator receipt;
     private LottoTicketService service;
 
     private static LottoProperties props() {
         return new LottoProperties(
-                new LottoProperties.Api("http://x", "m", Duration.ofSeconds(1), Duration.ofSeconds(1)),
+                new LottoProperties.Api("http://x", "m",
+                        Duration.ofSeconds(1), Duration.ofSeconds(1), 50,
+                        new LottoProperties.Api.Retry(3, Duration.ofMillis(200), 2.0, Duration.ofSeconds(2))),
                 new LottoProperties.Draw(1100, 100),
                 new LottoProperties.Generator(5, 50, 1, 45, 6),
                 new LottoProperties.Ticket(1000, 365)
@@ -36,22 +38,29 @@ class LottoTicketServiceTest {
     @BeforeEach
     void setUp() {
         lottoService = Mockito.mock(LottoService.class);
-        generator = Mockito.mock(LottoNumberGenerator.class);
         receipt = Mockito.mock(ReceiptNumberGenerator.class);
         when(receipt.generate()).thenReturn("00001 00002 00003 00004 00005 00006");
-        when(generator.generate()).thenReturn(new LottoNumbers(List.of(1, 2, 3, 4, 5, 6)));
-        service = new LottoTicketService(lottoService, generator, receipt, props());
+        // 자동 픽은 LottoService.generate(count, skipHistory) 단일 진입점에 위임됨
+        when(lottoService.generate(anyInt(), anyBoolean())).thenAnswer(inv -> {
+            int n = inv.getArgument(0, Integer.class);
+            boolean skip = inv.getArgument(1, Boolean.class);
+            List<LottoNumbers> picks = java.util.stream.IntStream.range(0, n)
+                    .mapToObj(i -> new LottoNumbers(List.of(1, 2, 3, 4, 5, 6)))
+                    .toList();
+            return new LottoService.GenerationResult(skip ? 0 : 1175, skip ? 0 : 1175, picks);
+        });
+        service = new LottoTicketService(lottoService, receipt, props());
     }
 
     @Test
-    void skipHistory_true_면_lottoService_호출하지_않는다() {
+    void skipHistory_true_면_skipHistory_플래그가_LottoService_에_그대로_전달된다() {
         LottoTicket ticket = service.issue(3, 1, null, true);
         assertThat(ticket.games()).hasSize(3);
         assertThat(ticket.games().get(0).mode()).isEqualTo(PickMode.MANUAL);
         assertThat(ticket.games().get(1).mode()).isEqualTo(PickMode.AUTO);
         assertThat(ticket.totalPrice()).isEqualTo(3000);
         assertThat(ticket.round()).isEqualTo(0);
-        Mockito.verifyNoInteractions(lottoService);
+        Mockito.verify(lottoService).generate(3, true);
     }
 
     @Test
