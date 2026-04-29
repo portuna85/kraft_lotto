@@ -8,10 +8,6 @@ spring:
     default-property-inclusion: non_null
     serialization:
       indent-output: false
-  cache:
-    type: simple
-    cache-names:
-      - lottoDraws
 
 server:
   port: 8080

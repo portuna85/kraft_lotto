@@ -54,7 +54,7 @@ public class LottoHistoryFetcher {
         }
 
         log.info("수집된 회차 수: {}/{}", winners.size(), latestDraw);
-        return winners;
+        return Set.copyOf(winners);
     }
 }
 

@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/lotto")
 @RequiredArgsConstructor
@@ -27,10 +29,9 @@ public class LottoController {
 
     @GetMapping("/generate")
     public GenerateLottoResponse generateLotto(
-            @RequestParam(required = false)
-            @Min(1) @Max(50) Integer count
+            @RequestParam(required = false) @Min(1) @Max(50) Integer count
     ) {
-        int requested = (count != null) ? count : properties.generator().defaultCount();
+        int requested = Optional.ofNullable(count).orElseGet(() -> properties.generator().defaultCount());
         var result = lottoService.generateUnique(requested);
         return new GenerateLottoResponse(
                 result.latestDraw(),
@@ -41,20 +42,13 @@ public class LottoController {
         );
     }
 
-    /**
-     * 영수증(티켓) 발급.
-     * @param games 총 게임 수 (1~50). 미지정 시 기본값.
-     * @param manual 수동 게임 수 (0 이상, games 이하). 미지정 시 0.
-     * @param skipHistory true 이면 외부 API 미호출(빠른 응답). 기본 true.
-     */
     @GetMapping("/ticket")
     public TicketResponse issueTicket(
             @RequestParam(required = false) @Min(1) @Max(50) Integer games,
             @RequestParam(required = false) @Min(0) @Max(50) Integer manual,
             @RequestParam(required = false, defaultValue = "true") boolean skipHistory
     ) {
-        int total = (games != null) ? games : properties.generator().defaultCount();
-        var ticket = lottoTicketService.issue(total, manual, skipHistory);
-        return TicketResponse.from(ticket);
+        int total = Optional.ofNullable(games).orElseGet(() -> properties.generator().defaultCount());
+        return TicketResponse.from(lottoTicketService.issue(total, manual, skipHistory));
     }
 }

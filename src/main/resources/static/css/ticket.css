@@ -26,7 +26,7 @@ body {
 /* 영수증 본체 */
 .ticket {
     width: 100%;
-    max-width: 380px;
+    max-width: 400px;
     background: #fff;
     position: relative;
     padding: 22px 22px 26px;
@@ -44,10 +44,9 @@ body {
             transparent 98%, #000 100%) bottom / calc(var(--tooth) * 2) var(--tooth) repeat-x,
         linear-gradient(#000, #000) center / 100% calc(100% - var(--tooth) * 2) no-repeat;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    transition: opacity 0.15s ease;
+    transition: opacity 0.2s ease;
 }
-
-.ticket[aria-busy="true"] { opacity: 0.6; pointer-events: none; }
+.ticket[aria-busy="true"] { opacity: 0.55; pointer-events: none; }
 
 /* 헤더 */
 .ticket__header {
@@ -88,9 +87,7 @@ body {
     font-weight: 800;
     color: #2c2c2c;
 }
-.ticket__logo-mark {
-    filter: hue-rotate(-10deg);
-}
+.ticket__logo-mark { filter: hue-rotate(-10deg); }
 .ticket__logo-text {
     background: linear-gradient(90deg, #ff6a00, #ffcc00 30%, #4caf50 60%, #2196f3);
     -webkit-background-clip: text;
@@ -115,10 +112,8 @@ body {
     margin: 14px 0 12px;
     padding: 0;
     display: grid;
-    grid-template-columns: 1fr;
     row-gap: 4px;
     font-size: 13px;
-    color: #555;
 }
 .ticket__meta > div {
     display: grid;
@@ -142,12 +137,8 @@ body {
     color: #222;
     border-top: 1px dashed #ccc;
     border-bottom: 1px dashed #ccc;
-    text-align: left;
 }
-.ticket__receipt--bottom {
-    margin-top: 14px;
-    border-bottom: none;
-}
+.ticket__receipt--bottom { margin-top: 14px; border-bottom: none; }
 
 /* 게임 라인 */
 .ticket__games {
@@ -157,28 +148,44 @@ body {
 }
 .game {
     display: grid;
-    grid-template-columns: 56px repeat(6, 1fr);
+    grid-template-columns: 52px repeat(6, 1fr);
     align-items: center;
-    padding: 10px 0;
-    font-size: 15px;
-    color: #1a1a1a;
+    padding: 8px 0;
 }
 .game + .game { border-top: 1px solid #f0f0f0; }
 .game__label {
+    font-size: 14px;
     font-weight: 600;
     color: #444;
 }
 .game__label small {
-    margin-left: 4px;
-    font-size: 12px;
-    color: #777;
-    font-weight: 500;
+    display: block;
+    font-size: 11px;
+    color: #999;
+    font-weight: 400;
+    margin-top: 1px;
 }
+
+/* 로또 번호 공 */
 .game__num {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 13px;
     font-weight: 700;
-    font-variant-numeric: tabular-nums;
+    margin: 0 auto;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
+    color: #fff;
 }
+/* 동행복권 공 색상 (1-9 황금, 10-19 파랑, 20-29 빨강, 30-39 회색, 40-45 초록) */
+.ball-y { background: radial-gradient(circle at 38% 35%, #ffe85c, #f0a800); color: #4a2e00; }
+.ball-b { background: radial-gradient(circle at 38% 35%, #90dcff, #2196f3); }
+.ball-r { background: radial-gradient(circle at 38% 35%, #ffaaaa, #e53935); }
+.ball-s { background: radial-gradient(circle at 38% 35%, #d0d0d0, #888); }
+.ball-g { background: radial-gradient(circle at 38% 35%, #d4f06a, #7cb518); color: #1a3a00; }
 
 /* 합계 */
 .ticket__total {
@@ -234,6 +241,7 @@ body {
     border-radius: 4px;
     font-family: inherit;
     font-size: 13px;
+    color: inherit;
 }
 .ticket__controls input:focus-visible {
     border-color: #1976d2;
@@ -254,22 +262,58 @@ body {
     cursor: pointer;
     font-family: inherit;
     font-size: 13px;
-    transition: background 0.15s;
+    transition: background 0.15s, border-color 0.15s;
 }
 .ticket__controls button:hover:not(:disabled) { background: #1565c0; border-color: #1565c0; }
 .ticket__controls button:active:not(:disabled) { background: #0d47a1; border-color: #0d47a1; }
-.ticket__controls button:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-}
-.btn-secondary {
-    background: #fff !important;
-    color: #1976d2 !important;
-}
+.ticket__controls button:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-secondary { background: #fff !important; color: #1976d2 !important; }
 .btn-secondary:hover:not(:disabled) { background: #e3f2fd !important; }
+
+/* 다크 모드 */
+@media (prefers-color-scheme: dark) {
+    body { background: #0f172a; color: #e2e8f0; }
+
+    .ticket {
+        background: #1e293b;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    .ticket__title { color: #f1f5f9; }
+    .ticket__close { color: #94a3b8; }
+    .ticket__close:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+
+    .ticket__logo-text sup { color: #f1f5f9; -webkit-text-fill-color: #f1f5f9; }
+    .ticket__round { color: #f1f5f9; }
+
+    .ticket__meta dt { color: #64748b; }
+    .ticket__meta dd { color: #cbd5e1; }
+
+    .ticket__receipt { color: #e2e8f0; border-color: #334155; }
+
+    .game + .game { border-color: #1e3a5f; }
+    .game__label { color: #94a3b8; }
+    .game__label small { color: #475569; }
+
+    .ticket__total { border-color: #334155; }
+    .ticket__total-label { color: #94a3b8; }
+    .ticket__total-value strong { color: #f1f5f9; }
+    .ticket__total-value em { color: #64748b; }
+
+    .ticket__error { background: #2d1117; border-color: #7f1d1d; color: #fca5a5; }
+
+    .ticket__controls { border-color: #334155; color: #94a3b8; }
+    .ticket__controls input {
+        background: #0f172a;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    .btn-secondary { background: #1e293b !important; color: #60a5fa !important; border-color: #60a5fa !important; }
+    .btn-secondary:hover:not(:disabled) { background: #1e3a5f !important; }
+}
 
 @media print {
     .no-print { display: none !important; }
     body { background: #fff; }
     .ticket { box-shadow: none; }
+    .game__num { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
