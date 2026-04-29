@@ -2,15 +2,14 @@
 
 # 🎰 Lotto Generator
 
-**동행복권 API와 연동되는 Spring Boot 기반 로또 번호 생성기 REST API**
+**동행복권 공식 API 연동 · Spring Boot 4 · Java 21 Virtual Threads 기반 로또 번호 생성기**
 
-역대 당첨번호를 제외한 고유 조합 생성 · 영수증 형태 발권 · 가상 스레드 기반 고성능 수집
+역대 당첨번호 제외 고유 조합 · 영수증 형태 발권 · 수동 번호 입력 · 가상 스레드 fan-out · 레벨별 로그 분리
 
 [![Java](https://img.shields.io/badge/Java-21_LTS-007396?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.6-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Gradle](https://img.shields.io/badge/Gradle-9.4.1-02303A?logo=gradle&logoColor=white)](https://gradle.org/)
-[![Build](https://img.shields.io/badge/Build-Kotlin_DSL-7F52FF?logo=kotlin&logoColor=white)](https://docs.gradle.org/current/userguide/kotlin_dsl.html)
-[![Cache](https://img.shields.io/badge/Cache-Caffeine_TTL-FF6F00?logo=apache&logoColor=white)](https://github.com/ben-manes/caffeine)
+[![Tests](https://img.shields.io/badge/Tests-20_passing-brightgreen)](#-테스트)
 
 </div>
 
@@ -26,43 +25,49 @@
 - [🧠 핵심 설계](#-핵심-설계)
 - [📁 패키지 구조](#-패키지-구조)
 - [⚙️ 설정](#️-설정)
+- [📝 로깅 전략](#-로깅-전략)
 - [🔌 API 명세](#-api-명세)
 - [🖥 프론트엔드](#-프론트엔드)
+- [🧪 테스트](#-테스트)
+- [📊 관측성](#-관측성)
 - [▶️ 실행](#️-실행)
 
 ---
 
 ## ✨ 주요 특징
 
-| | |
+| 영역 | 핵심 |
 |---|---|
-| 🧵 **Java 21 Virtual Threads** | 회차별 fan-out 수집을 가상 스레드로 처리, Semaphore(50)로 외부 API 동시성 제한 |
-| 🔍 **이진 탐색 최신 회차 탐지** | `searchStart=1100`에서 출발해 O(log n) 호출로 최신 회차 확정, 결과 30분 캐시 |
-| 🚫 **역대 당첨번호 제외 생성** | 1,100여 회차 누적 당첨 조합과 대조하여 고유 번호만 반환 |
-| 🧾 **영수증 발권 모드** | 동행복권 영수증 포맷으로 게임 라벨(A~AX)·발행시각·청구마감일 포함 |
-| ⚡ **Caffeine 이중 TTL 캐시** | 추첨 결과 7일 보관 + 최신 회차 30분 TTL로 불필요한 재탐색 완전 차단 |
-| 🛡 **시작 시 설정 검증** | `@Validated` 제약으로 잘못된 yml 설정 시 애플리케이션 기동 즉시 실패 |
-| 🎱 **실제 복권 공 UI** | 번호 범위별 색상 코딩(황금·파랑·빨강·회색·초록) + 다크 모드 + 자동 재발권 |
-| 📋 **RFC 7807 표준 오류** | `ProblemDetail` 기반 일관된 에러 응답 |
-| ♿ **접근성 친화 UI** | `aria-busy`·`role="alert"`·`:focus-visible`·XSS 안전 정적 프론트엔드 |
+| 🧵 **Java 21 Virtual Threads** | 회차별 fan-out을 가상 스레드로 처리, `Semaphore`로 외부 API 동시 호출 수 제한 |
+| 🔍 **이진 탐색 최신 회차 탐지** | 지수 확장(×2) + 이진 탐색으로 O(log n) 호출만에 최신 회차 확정 |
+| 🚫 **역대 당첨번호 제외 생성** | 1,100여 회차 누적 조합과 대조하여 고유 번호만 반환 |
+| 🧾 **영수증 발권 모드** | 동행복권 영수증 포맷 그대로(라벨 A~ZZ · 발행시각 · 추첨일 · 청구마감일) |
+| ✍️ **수동 번호 입력** | `manualNumbers` 파라미터로 사용자 직접 입력, 자동 픽과 자유 조합 |
+| 🔁 **외부 API 재시도** | `RetryTemplate` 지수 백오프 (네트워크 일시 장애만 재시도) |
+| 💾 **3계층 캐싱** | Caffeine — `lottoDraws`(7d) · `latestDraw`(30m) · `historyWinners`(7d) |
+| 📋 **RFC 7807 ProblemDetail** | 검증/타입/필수파라미터/형식/리소스/일반 오류 일관 응답 |
+| 📊 **Micrometer 메트릭** | `lotto.api.fetch` (P50/P95/P99 latency), `lotto.api.fail` 실패 카운트 |
+| 📝 **레벨별 로그 분리** | TRACE/DEBUG/INFO/WARN/ERROR/ALL 6개 파일 + gzip 롤링 |
+| 🌱 **프로파일 분리** | `dev`(전체 노출/DEBUG) · `prod`(최소 노출/WARN+) |
+| ♿ **접근성 친화 UI** | `aria-busy` · `role="alert"` · `:focus-visible` · XSS 안전 |
 
 ---
 
 ## 🚀 빠른 시작
 
 ```powershell
-# 1) 빌드 + 실행
-./gradlew.bat bootRun
+# 1) 빌드 + 실행 (기본 dev 프로파일)
+.\gradlew.bat bootRun
 
-# 2) 브라우저에서 영수증 UI 열기
+# 2) 브라우저에서 영수증 UI
 # http://localhost:8080/
 
-# 3) 또는 API 직접 호출
+# 3) API 호출
 curl "http://localhost:8080/api/lotto/ticket?games=5"
 ```
 
-> 💡 빠른 티켓 발권은 외부 API를 호출하지 않고 즉시 응답합니다.  
-> 역대 당첨 제외 모드(`skipHistory=false`)는 동행복권 API 호출이 발생해 첫 호출 시 수 초가 소요될 수 있습니다.
+> 💡 `skipHistory=true`(기본) 발권은 외부 API를 호출하지 않아 즉시 응답합니다.
+> `skipHistory=false` 모드는 동행복권 1~N회차를 fan-out 수집하므로 **첫 호출 시 수 초** 소요(이후 캐시).
 
 ---
 
@@ -70,14 +75,17 @@ curl "http://localhost:8080/api/lotto/ticket?games=5"
 
 | 항목 | 버전 / 사양 |
 |---|---|
-| **Java** | 21 LTS (Virtual Threads, Records) |
+| **Java** | 21 LTS (Virtual Threads · Records) |
 | **Spring Boot** | 4.0.6 |
-| **Spring Framework** | 6.x |
 | **Build** | Gradle 9.4.1 (Kotlin DSL) |
-| **HTTP Client** | Spring `RestClient` + JDK HttpClient (HTTP/2) |
-| **Cache** | Spring Cache + **Caffeine** (이중 TTL: 7일 / 30분) |
-| **Validation** | Jakarta Bean Validation (`@Validated` 설정 검증) |
-| **Lombok** | `@RequiredArgsConstructor` 생성자 주입, `@Slf4j` 로깅 |
+| **HTTP Client** | Spring `RestClient` + JDK `HttpClient` (HTTP/2) |
+| **Cache** | Spring Cache + Caffeine (`recordStats` 활성) |
+| **Resilience** | Spring Retry 2.0.10 (`RetryTemplate`) |
+| **Validation** | Jakarta Bean Validation |
+| **Observability** | Spring Actuator + Micrometer Timer |
+| **Logging** | Logback (레벨별 RollingFileAppender + gzip) |
+| **Lombok** | `@RequiredArgsConstructor` · `@Slf4j` |
+| **Testing** | JUnit 5 + Mockito + MockMvc Standalone |
 
 ---
 
@@ -85,149 +93,138 @@ curl "http://localhost:8080/api/lotto/ticket?games=5"
 
 ```mermaid
 flowchart LR
-    Browser([🌐 Browser\n영수증 UI])
-    Controller["🎯 LottoController\n(@RestController)"]
-    Service["⚙️ LottoService / LottoTicketService\n(@Service)"]
-    Finder["🔍 LottoDrawFinder\n이진 탐색 + @Cacheable(30분)"]
-    Fetcher["📥 LottoHistoryFetcher\nVirtual Threads + Semaphore(50)"]
-    ApiClient["🔌 LottoApiClient\n(인터페이스, PSA)"]
-    Impl["🌍 DhLotteryApiClient\n@Cacheable(7일)"]
-    Cache[("⚡ Caffeine\nlottoDraws / latestDraw")]
+    Client([🌐 Client])
+    Controller["🎯 LottoController<br/>@RestController @Validated"]
+    Advice["🛡 GlobalExceptionHandler<br/>ProblemDetail (RFC 7807)"]
+    LS["⚙️ LottoService<br/>(자동 픽 · 고유성 보장)"]
+    LTS["🧾 LottoTicketService<br/>(영수증 발권)"]
+    Finder["🔍 LottoDrawFinder<br/>이진 탐색 + @Cacheable"]
+    HistCache["💾 LottoHistoryCache<br/>@Cacheable"]
+    Fetcher["📥 LottoHistoryFetcher<br/>Virtual Threads + Semaphore"]
+    Gen["🎲 LottoNumberGenerator<br/>부분 Fisher–Yates"]
+    Receipt["🧾 ReceiptNumberGenerator"]
+    ApiClient["🔌 LottoApiClient (DIP)"]
+    Impl["🌍 DhLotteryApiClient<br/>@Cacheable + RetryTemplate + Micrometer"]
     Dh([💰 동행복권 API])
 
-    Browser --> Controller --> Service
-    Service --> Finder
-    Service --> Fetcher
+    Client -->|HTTP| Controller
+    Controller -.오류.-> Advice
+    Controller --> LS
+    Controller --> LTS
+    LTS --> LS
+    LTS --> Receipt
+    LS --> Finder
+    LS --> HistCache
+    LS --> Gen
+    HistCache --> Fetcher
     Finder --> ApiClient
     Fetcher --> ApiClient
-    ApiClient -.-> Impl
-    Impl --> Cache
+    ApiClient -.구현.-> Impl
     Impl --> Dh
 ```
 
-요청 흐름은 컨트롤러 → 서비스 파사드 → (회차 탐색기 / 이력 수집기) → 추상화된 API 클라이언트 → Caffeine 캐시 → 동행복권 어댑터 순으로 단방향 의존을 유지합니다.
+요청 흐름은 **컨트롤러 → 애플리케이션 서비스 → 도메인 협력자 → 추상화된 외부 API 클라이언트** 순으로 단방향 의존을 유지합니다. 자동 픽 생성 경로는 `LottoService.generate()` 단일 진입점으로 통합되어 `LottoTicketService`도 같은 경로를 재사용합니다.
 
 ---
 
 ## 🎯 스프링 5원칙 적용
 
-### 1️⃣ IoC — Inversion of Control
-`@SpringBootApplication` + `@ConfigurationPropertiesScan` 조합으로 컴포넌트 탐색을 Spring 컨테이너에 위임.
+### 1️⃣ IoC
+`@SpringBootApplication` + `@ConfigurationPropertiesScan`으로 컴포넌트/설정 탐색을 컨테이너에 위임.
 
-### 2️⃣ DI — Dependency Injection
-Lombok `@RequiredArgsConstructor` 기반 **생성자 주입**. 모든 의존성을 `final`로 선언해 불변성을 강제합니다.
+### 2️⃣ DI
+Lombok `@RequiredArgsConstructor` 기반 **생성자 주입**. 모든 협력자를 `final`로 선언해 불변성 강제.
 
 ```java
 @Service
 @RequiredArgsConstructor
 public class LottoService {
     private final LottoDrawFinder lottoDrawFinder;
-    private final LottoHistoryFetcher lottoHistoryFetcher;
+    private final LottoHistoryCache lottoHistoryCache;
     private final LottoNumberGenerator lottoNumberGenerator;
 }
 ```
 
-### 3️⃣ AOP — Aspect-Oriented Programming
-`@Cacheable`로 API 응답과 최신 회차 탐색 결과를 횡단 관심사로 분리. 캐시 히트 시 HTTP 호출·이진 탐색 완전 생략.
+### 3️⃣ AOP
+`@Cacheable`로 외부 API 응답·역대 당첨 Set을 횡단 관심사로 분리. `@RestControllerAdvice`로 예외 처리도 횡단 분리.
 
-```java
-// 추첨 결과: 7일 TTL (결과는 영구 불변)
-@Cacheable(cacheNames = "lottoDraws", unless = "#result == null || !#result.isPresent()")
-public Optional<LottoDrawResponse> fetchDraw(int drawNo) { ... }
+### 4️⃣ PSA
+- `LottoApiClient` 인터페이스로 외부 API 의존성 추상화(DIP). 구현체 교체 시 서비스 무변경.
+- HTTP는 Spring `RestClient`(PSA), 캐시는 Spring Cache(PSA), 재시도는 Spring Retry(PSA), 메트릭은 Micrometer(PSA).
 
-// 최신 회차: 30분 TTL (매주 토요일 갱신 주기 반영)
-@Cacheable(cacheNames = "latestDraw")
-public int findLatestDraw() { ... }
-```
-
-### 4️⃣ PSA — Portable Service Abstraction
-`LottoApiClient` 인터페이스로 외부 API 의존성을 추상화(DIP). 구현체 `DhLotteryApiClient`를 교체해도 서비스 계층은 무변경. HTTP 통신 자체도 Spring `RestClient`라는 PSA를 활용.
-
-### 5️⃣ POJO — Plain Old Java Object
-도메인 모델(`LottoNumbers`, `LottoTicket`, `TicketGame`)을 Java **record**(불변 POJO)로 표현해 부수효과 없는 값 객체로 설계. `@ConfigurationProperties`도 record로 선언해 일관성 유지.
+### 5️⃣ POJO
+도메인(`LottoNumbers`, `LottoTicket`, `TicketGame`, `LottoDrawResponse`)을 **Java record**로 표현 — 부수효과 없는 불변 값 객체.
 
 ---
 
 ## 🧠 핵심 설계
 
-### ⚡ Caffeine 이중 TTL 캐시 전략
-
-캐시 대상별로 생존 주기가 다르므로 `CaffeineCacheManager`로 캐시를 분리 구성합니다.
-
-| 캐시 이름 | TTL | 최대 항목 | 근거 |
-|---|---|---|---|
-| `lottoDraws` | **7일** | 2,000 | 추첨 결과는 발표 후 영구 불변 |
-| `latestDraw` | **30분** | 1 | 매주 토요일 추첨 — 30분마다 자동 갱신 |
-
-```java
-manager.registerCustomCache("lottoDraws",
-    Caffeine.newBuilder().maximumSize(2000).expireAfterWrite(Duration.ofDays(7)).build());
-manager.registerCustomCache("latestDraw",
-    Caffeine.newBuilder().maximumSize(1).expireAfterWrite(Duration.ofMinutes(30)).build());
-```
-
 ### 🧵 Virtual Threads + Semaphore 기반 fan-out
-
-역대 당첨번호 수집 시 회차별로 가상 스레드를 할당하되, **`Semaphore(lotto.api.max-concurrent)`** 로 외부 API 동시 요청 수를 제한하여 동행복권 서버 과부하를 방지합니다.
 
 ```text
 LottoHistoryFetcher
   └─ Executors.newVirtualThreadPerTaskExecutor()
-       ├─ Semaphore(lotto.api.max-concurrent = 50)  ← 설정 외부화된 동시성 제어
-       └─ @Cacheable(lottoDraws, 7일)               ← 재호출 비용 제거
+       ├─ Semaphore(lotto.api.max-concurrent = 50)  ← 외부 API 보호
+       └─ DhLotteryApiClient.@Cacheable             ← 회차별 응답 캐시
 ```
 
-> 가상 스레드는 1,000개 이상 생성해도 부담이 없지만, 외부 API 서버 보호를 위해 동시 호출 수는 별도 제한합니다.
+가상 스레드는 수천 개 생성해도 부담이 적지만, **외부 API 동시 호출 수만 별도로 제한**하여 동행복권 서버 정책을 준수합니다. 동시 한도는 `lotto.api.max-concurrent`로 외부화되어 재배포 없이 조정 가능합니다.
 
 ### 🔍 이진 탐색으로 최신 회차 탐지
 
-`LottoDrawFinder`는 `searchStart=1100`에서 출발해 상한을 지수적으로 확장한 뒤, **이진 탐색으로 O(log n)** API 호출만으로 최신 회차를 확정합니다. 결과는 30분간 캐시되어 반복 탐색을 차단합니다.
-
 ```text
-[1100] → 200 OK → 상한 확장 (1200, 1400, 1800, ...)
-                       ↓
-                  최초 404 발견
-                       ↓
-              [last_ok, first_404] 구간 이진 탐색
-                       ↓
-                   최신 회차 확정 → Caffeine latestDraw 30분 캐시
+[1100] OK → 상한 지수 확장 (1200 → 1400 → 1800 → 2600 ...)
+                    ↓
+              최초 404 발견
+                    ↓
+        [low, high] 이진 탐색으로 좁힘
+                    ↓
+              최신 회차 확정 (30분 캐시)
 ```
 
-### 🚫 역대 당첨번호 제외 번호 생성
+선형 증가 대신 **지수 확장**으로 호출 횟수를 O(log n)에 묶고, 결과는 `latestDraw` 캐시(30분 TTL)에 저장.
 
-`LottoService.generateUnique()`는 역대 당첨번호 `Set`(불변 `Set.copyOf()`)과 대조하며 중복 없는 고유 조합만 반환합니다. 안전 한도(`count × 1000`회)를 초과하면 `IllegalStateException`을 던져 무한 루프를 방지합니다.
+### 💾 3계층 캐싱 전략
 
-### 🛡 시작 시 설정 자동 검증
+| 캐시 | 키 | TTL | 용도 |
+|---|---|---|---|
+| `lottoDraws` | `drawNo` | 7일 | 회차별 응답 (영구 불변 데이터) |
+| `latestDraw` | (none) | 30분 | 최신 회차 번호 (주 1회 갱신) |
+| `historyWinners` | `latestDraw` | 7일 | 역대 당첨 Set 자체 (fan-out 결과 통째 메모이즈) |
 
-`LottoProperties`에 `@Validated`를 적용해 잘못된 설정 값이 있을 경우 애플리케이션 기동 단계에서 즉시 실패합니다.
+`historyWinners` 추가로 **같은 회차 기준 반복 요청 시 fan-out 자체를 생략**합니다.
+
+### 🔁 외부 API 재시도 (Spring Retry)
 
 ```java
-@ConfigurationProperties(prefix = "lotto")
-@Validated
-public record LottoProperties(
-    @Valid @NotNull Api api,
-    @Valid @NotNull Draw draw, ...
-) {
-    public record Api(
-        @NotBlank String baseUrl,
-        @NotNull Duration connectTimeout, ...
-    ) {}
-    public record Draw(@Min(1) int searchStart, @Min(1) int searchStep) {}
-}
+SimpleRetryPolicy(maxAttempts = 3,
+                  retryableExceptions = { ResourceAccessException.class })
+ExponentialBackOffPolicy(initial = 200ms, multiplier = 2.0, max = 2s)
 ```
 
-### 📋 RFC 7807 표준 오류 응답
+- **네트워크/타임아웃만 재시도** (404·4xx·5xx는 재시도 X)
+- `@Cacheable`(외곽) → `RetryTemplate`(내부) 순서를 명시적으로 보장하여 AOP 어드바이스 순서 모호성 제거.
 
-`GlobalExceptionHandler`(`@RestControllerAdvice`)가 모든 예외를 `ProblemDetail`로 변환합니다.
+### 🎲 부분 Fisher–Yates 셔플
+
+매 호출 풀 전체 셔플 대신 **앞 `pickSize` 슬롯만 swap** → 호출당 swap 수 `O(45) → O(6)`로 감소.
+
+### 🚫 고유 번호 생성 안전망
+
+`LottoService.generateUnique()`는 `count × 1000`회를 초과하면 `IllegalStateException`으로 무한 루프 방지.
+
+### 📋 RFC 7807 ProblemDetail 일관 응답
 
 ```json
 {
-  "type": "urn:problem-type:lotto/bad-request",
-  "title": "잘못된 요청",
+  "type": "urn:problem-type:lotto/type-mismatch",
+  "title": "파라미터 형식 오류",
   "status": 400,
-  "detail": "게임 수는 1 이상이어야 합니다."
+  "detail": "파라미터 'count' 의 형식이 올바르지 않습니다. (요구 타입: Integer)"
 }
 ```
+
+처리 핸들러: `IllegalArgumentException` · `ConstraintViolationException` · `MethodArgumentTypeMismatchException` · `MissingServletRequestParameterException` · `HttpMessageNotReadableException` · `IllegalStateException` · `NoResourceFoundException` · `Exception`(fallback).
 
 ---
 
@@ -235,65 +232,64 @@ public record LottoProperties(
 
 ```
 com.lotto
-├── LottoApplication              # 부트 진입점, @ConfigurationPropertiesScan
+├── LottoApplication                  # @SpringBootApplication + @ConfigurationPropertiesScan
 │
 ├── config/
-│   ├── LottoProperties           # @ConfigurationProperties record + @Validated
-│   └── RestClientConfig          # @EnableCaching, RestClient, CaffeineCacheManager
+│   ├── LottoProperties               # @ConfigurationProperties(prefix="lotto") record + @Validated
+│   │   ├── Api                       #   ↳ baseUrl/method/timeouts/maxConcurrent/Retry
+│   │   │   └── Retry                 #     ↳ maxAttempts/initialInterval/multiplier/maxInterval
+│   │   ├── Draw                      #   ↳ searchStart/searchStep
+│   │   ├── Generator                 #   ↳ defaultCount/maxCount/numberMin/numberMax/pickSize
+│   │   └── Ticket                    #   ↳ pricePerGame/claimValidityDays
+│   └── RestClientConfig              # @EnableCaching · RestClient Bean · Caffeine 3캐시
 │
 ├── client/
-│   ├── LottoApiClient            # 인터페이스 (DIP)
-│   ├── DhLotteryApiClient        # 동행복권 HTTP 어댑터, @Cacheable(lottoDraws, 7일)
+│   ├── LottoApiClient                # 인터페이스 (DIP)
+│   ├── DhLotteryApiClient            # 어댑터: @Cacheable + RetryTemplate + Micrometer
 │   └── dto/
-│       └── LottoDrawResponse     # API 응답 record DTO
+│       └── LottoDrawResponse         # 동행복권 응답 record
 │
 ├── domain/
-│   ├── LottoNumbers              # 불변 값 객체 record (6개 번호 + 검증)
-│   ├── LottoNumberGenerator      # 무작위 번호 생성 @Component
-│   ├── PickMode                  # MANUAL / AUTO enum
-│   ├── TicketGame                # 게임 한 줄 record
-│   ├── LottoTicket               # 영수증 도메인 record
-│   └── ReceiptNumberGenerator    # 영수증 번호 생성 @Component
+│   ├── LottoNumbers                  # 6개 번호 record + 단일 패스 검증 + parse()
+│   ├── LottoNumberGenerator          # 부분 Fisher–Yates @Component
+│   ├── PickMode                      # MANUAL/AUTO enum + 한국어 라벨
+│   ├── TicketGame                    # 게임 한 줄 + labelFor() (A~ZZ, 702개)
+│   ├── LottoTicket                   # 영수증 도메인 record
+│   └── ReceiptNumberGenerator        # 5자리×6 영수증 번호 @Component
 │
 ├── service/
-│   ├── LottoDrawFinder           # 최신 회차 이진 탐색 + @Cacheable(latestDraw, 30분)
-│   ├── LottoHistoryFetcher       # 역대 당첨번호 fan-out 수집, Set.copyOf() 반환
-│   ├── LottoHistoryCache         # 역대 당첨번호 Set 캐시 + @Cacheable(historyWinners, 7일)
-│   ├── LottoService              # 번호 생성 단일 진입점 (skipHistory 통합) @Service
-│   └── LottoTicketService        # 티켓 발권 @Service (자동 픽은 LottoService 위임)
+│   ├── LottoDrawFinder               # 최신 회차 이진 탐색 @Cacheable
+│   ├── LottoHistoryFetcher           # 1~N 회차 fan-out (Virtual Threads + Semaphore)
+│   ├── LottoHistoryCache             # 역대 당첨 Set 자체 @Cacheable
+│   ├── LottoService                  # Facade: 자동 픽 단일 진입점 (skipHistory 분기)
+│   └── LottoTicketService            # 영수증 발권: 라벨/모드/일자/가격 조립
 │
 └── controller/
-    ├── LottoController           # REST 엔드포인트, Optional.ofNullable 기본값 처리
-    ├── GlobalExceptionHandler    # @RestControllerAdvice, ProblemDetail
+    ├── LottoController               # /api/lotto/{generate, ticket} @Validated
+    ├── GlobalExceptionHandler        # 8종 예외 → ProblemDetail
     └── dto/
-        ├── GenerateLottoResponse # 번호 생성 응답 record
-        └── TicketResponse        # 영수증 응답 record (Locale.KOREAN 고정)
+        ├── GenerateLottoResponse     # 번호 생성 응답
+        └── TicketResponse            # 영수증 응답 (한국어 포맷팅)
 ```
 
 ---
 
 ## ⚙️ 설정
 
-`application.yml` — 모든 값은 `LottoProperties` record에 `@ConfigurationProperties(prefix="lotto")`로 **타입 안전하게 바인딩**되며, `@Validated`로 기동 시 검증됩니다.
+`src/main/resources/application.yml` (공통) + `application-dev.yml` / `application-prod.yml` (프로파일별).
+모든 값은 `LottoProperties` record에 **타입 안전하게 바인딩** + Bean Validation 적용.
 
 ```yaml
 spring:
-  application:
-    name: lotto-generator
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   threads:
     virtual:
-      enabled: true          # Spring MVC 요청 처리도 가상 스레드 사용
-  jackson:
-    default-property-inclusion: non_null
-    serialization:
-      indent-output: false
+      enabled: true                       # ← 가상 스레드 활성화
 
-server:
-  port: 8080
-  compression:
-    enabled: true
-    mime-types: application/json,application/problem+json
-    min-response-size: 1024
+logging:
+  file:
+    path: logs                            # ← 로그 디렉터리 (logback-spring.xml)
 
 lotto:
   api:
@@ -301,14 +297,14 @@ lotto:
     method: getLottoNumber
     connect-timeout: 3s
     read-timeout: 5s
-    max-concurrent: 50      # fan-out 시 동행복권 API 동시 요청 수 한도
+    max-concurrent: 50                    # ← Semaphore 한도
     retry:
       max-attempts: 3
       initial-interval: 200ms
       multiplier: 2.0
       max-interval: 2s
   draw:
-    search-start: 1100     # 탐색 시작 회차 (이 값 미만은 항상 유효하다고 가정)
+    search-start: 1100                    # ← 이진 탐색 시작점
     search-step: 100
   generator:
     default-count: 5
@@ -321,7 +317,68 @@ lotto:
     claim-validity-days: 365
 ```
 
-> 캐시(`lottoDraws` / `latestDraw`) TTL은 `RestClientConfig`의 `CaffeineCacheManager` 빈에서 코드로 관리합니다.
+### 프로파일별 차이
+
+| 항목 | `dev` | `prod` |
+|---|---|---|
+| Actuator 노출 | `health, info, metrics, beans, env, mappings, caches, loggers` | `health, info, metrics` |
+| Health 상세 | `always` | `when_authorized` |
+| Root 로그 레벨 | `INFO` | `WARN` |
+| `com.lotto` 로그 | `DEBUG` | `INFO` |
+
+---
+
+## 📝 로깅 전략
+
+`logback-spring.xml`로 **레벨별 단독 파일 분리** + 통합 파일 동시 운영.
+
+### 출력 구조
+
+```
+logs/
+├── lotto-trace.log     # TRACE 전용
+├── lotto-debug.log     # DEBUG 전용
+├── lotto-info.log      # INFO 전용
+├── lotto-warn.log      # WARN 전용
+├── lotto-error.log     # ERROR 전용
+├── lotto-all.log       # 전 레벨 통합 (디버깅 편의)
+└── archive/
+    └── lotto-{level}.YYYY-MM-DD.N.log.gz   # 롤링 산출물 (gzip)
+```
+
+### 정책
+
+| 항목 | 값 |
+|---|---|
+| 레벨 격리 | `LevelFilter` ACCEPT/DENY → 한 파일에 한 레벨만 |
+| 롤링 | 일자별 + 파일당 **10MB** 초과 시 분할 |
+| 보존 | **30일**, 누적 **1GB** 상한 (통합 파일은 14일/2GB) |
+| 압축 | 롤링 시 **gzip** 자동 |
+| 콘솔 | 모든 프로파일에서 동시 출력 |
+| 인코딩 | UTF-8 |
+| 핫 리로드 | `scan="true" scanPeriod="30 seconds"` |
+
+### 프로파일별 활성 appender
+
+| 프로파일 | Root | `com.lotto` | 활성 파일 |
+|---|---|---|---|
+| `dev` | DEBUG | DEBUG | TRACE/DEBUG/INFO/WARN/ERROR/ALL |
+| `prod` | INFO | INFO | INFO/WARN/ERROR/ALL |
+| 기본/test | INFO | DEBUG | DEBUG/INFO/WARN/ERROR/ALL |
+
+### 환경 변수로 경로 변경
+
+```powershell
+$env:LOG_PATH="C:\custom\path"; .\gradlew.bat bootRun
+```
+
+### 런타임 로그 레벨 변경 (Actuator Loggers)
+
+```powershell
+curl -X POST http://localhost:8080/actuator/loggers/com.lotto `
+  -H "Content-Type: application/json" `
+  -d '{\"configuredLevel\":\"TRACE\"}'
+```
 
 ---
 
@@ -329,15 +386,11 @@ lotto:
 
 ### `GET /api/lotto/generate` — 번호 생성 (역대 당첨 제외)
 
-```http
-GET /api/lotto/generate?count=5
-```
-
 | 파라미터 | 타입 | 범위 | 기본값 | 설명 |
 |---|---|---|---|---|
-| `count` | Integer | 1 ~ 50 | 5 | 생성할 조합 수 |
+| `count` | Integer | 1~50 | 5 | 생성할 조합 수 |
 
-**응답 예시**
+**응답**
 
 ```json
 {
@@ -353,17 +406,22 @@ GET /api/lotto/generate?count=5
 
 ### `GET /api/lotto/ticket` — 영수증(티켓) 발권
 
-```http
-GET /api/lotto/ticket?games=5&manual=1&skipHistory=true
-```
-
 | 파라미터 | 타입 | 범위 | 기본값 | 설명 |
 |---|---|---|---|---|
-| `games` | Integer | 1 ~ 50 | 5 | 총 게임 수 |
-| `manual` | Integer | 0 ~ 50 | 0 | 수동 처리 게임 수 |
+| `games` | Integer | 1~50 | 5 | 총 게임 수 |
+| `manual` | Integer | 0~50 | 0 | 수동 라벨 게임 수 |
+| `manualNumbers` | List\<String\> | — | — | 수동 입력 번호. 항목당 6개 정수, 콤마/공백/세미콜론/하이픈 구분 |
 | `skipHistory` | boolean | — | `true` | `false` 시 역대 당첨 제외 (느림) |
 
-**응답 예시**
+**수동 입력 예시**
+
+```http
+GET /api/lotto/ticket?games=5&manualNumbers=1,2,3,4,5,6&manualNumbers=7-8-9-10-11-12
+```
+
+`manualNumbers`가 제공되면 그 개수가 자동으로 수동 슬롯 수가 됩니다 (`manual` 파라미터는 무시).
+
+**응답**
 
 ```json
 {
@@ -374,66 +432,102 @@ GET /api/lotto/ticket?games=5&manual=1&skipHistory=true
   "claimDeadline": "2027/05/02",
   "receiptNumber": "68765 57128 51424 59983 79420 00166",
   "games": [
-    { "label": "A", "mode": "MANUAL", "modeLabel": "수동", "numbers": [3, 11, 22, 28, 33, 41] },
+    { "label": "A", "mode": "MANUAL", "modeLabel": "수동", "numbers": [1, 2, 3, 4, 5, 6] },
     { "label": "B", "mode": "AUTO",   "modeLabel": "자동", "numbers": [7, 15, 24, 30, 38, 44] }
   ],
-  "price": { "unit": 1000, "total": 2000, "currency": "원" }
+  "price": { "unit": 1000, "total": 5000, "currency": "원" }
 }
 ```
 
-> 🏷 **게임 라벨 규칙**: `A` ~ `Z` (26개) → `AA` ~ `AX` (24개). **최대 50게임** 지원.
+> 🏷 **게임 라벨**: `A`~`Z` → `AA`~`ZZ` (총 702개 지원). 운영 한도는 `max-count=50`.
 
 ---
 
-### 액추에이터
+### Actuator
 
-| 엔드포인트 | 용도 |
-|---|---|
-| `GET /actuator/health` | 헬스 체크 |
-| `GET /actuator/info` | 빌드 / 애플리케이션 정보 |
-| `GET /actuator/metrics` | JVM · Caffeine 캐시 · HTTP 메트릭 |
+| 엔드포인트 | dev | prod | 용도 |
+|---|---|---|---|
+| `GET /actuator/health` | ✅ | ✅ | 헬스 체크 |
+| `GET /actuator/info` | ✅ | ✅ | 빌드 정보 |
+| `GET /actuator/metrics` | ✅ | ✅ | JVM/Cache/HTTP/Custom 메트릭 |
+| `GET /actuator/loggers` | ✅ | ❌ | 런타임 로그 레벨 |
+| `GET /actuator/caches` | ✅ | ❌ | Caffeine 통계 |
+| `GET /actuator/beans` · `env` · `mappings` | ✅ | ❌ | 디버그 |
 
 ---
 
 ## 🖥 프론트엔드
 
-`src/main/resources/static/` 에 Spring Boot 정적 리소스로 포함된 **영수증 UI**.
+`src/main/resources/static/` 정적 리소스로 통합된 **영수증 UI**.
 
 ```
 static/
-├── index.html      # 영수증 뷰
-├── js/ticket.js    # 바닐라 JS — fetch · AbortController · 디바운스 · 공 색상
-└── css/ticket.css  # 동행복권 영수증 스타일 · 공 색상 · 다크 모드 · 접근성
+├── index.html      # 영수증 뷰 (단일 페이지)
+├── js/ticket.js    # 바닐라 JS — fetch · AbortController · 디바운스 · 상태 관리
+└── css/ticket.css  # 동행복권 영수증 디자인 + 다크모드/프린트/접근성
 ```
 
-🌐 **브라우저에서 바로 확인** → `http://localhost:8080/`
+🌐 `http://localhost:8080/`
 
-### 🎱 번호 공 색상 코딩
+### UX 특징
 
-동행복권 실제 복권과 동일한 색상 체계를 적용합니다.
+- 🔁 **`AbortController`**로 중복 요청 자동 취소
+- ⏳ 발권 중 버튼 비활성화 + `aria-busy` 반영
+- 💀 스켈레톤 로딩 애니메이션
+- ⚠️ 인라인 에러 박스 + 재시도 버튼 (`role="alert"`)
+- 🖨 인쇄 버튼 (`window.print()`) — 컨트롤은 `@media print`에서 숨김
+- ✍️ `<details>` 접이식 textarea로 수동 번호 입력
+- 🛡 **XSS 안전**: 모든 서버 데이터는 `textContent`만 사용 (`innerHTML` 미사용)
+- ⌨️ `:focus-visible` 키보드 포커스 링
 
-| 번호 범위 | 색상 | CSS 클래스 |
+---
+
+## 🧪 테스트
+
+### 구성 (총 20 테스트, 7 클래스)
+
+| 테스트 클래스 | 영역 | 케이스 수 |
 |---|---|---|
-| 1 ~ 9 | 🟡 황금 | `.ball-y` |
-| 10 ~ 19 | 🔵 파랑 | `.ball-b` |
-| 20 ~ 29 | 🔴 빨강 | `.ball-r` |
-| 30 ~ 39 | ⚫ 회색 | `.ball-s` |
-| 40 ~ 45 | 🟢 초록 | `.ball-g` |
+| `LottoNumbersTest` | 도메인 검증 (null/범위/중복/개수) | 6 |
+| `LottoNumberGeneratorTest` | 100회 생성 무결성/통계 | 3 |
+| `ReceiptNumberGeneratorTest` | 영수증 포맷 | 1 |
+| `LottoDrawFinderTest` | 이진 탐색 시나리오 | 2 |
+| `LottoTicketServiceTest` | 수동/자동 슬롯 배치 · 예외 경로 | 4 |
+| `LottoControllerTest` | MockMvc Standalone + ProblemDetail | 3 |
+| `LottoApplicationTests` | 컨텍스트 로딩 회귀 | 1 |
 
-각 공은 `radial-gradient`로 입체감을 표현합니다.
+### 실행
 
-### 주요 UX 특징
+```powershell
+.\gradlew.bat test
+```
 
-- 🎱 **번호 공 시각화**: 번호 범위별 색상 코딩 + `radial-gradient` 입체 효과
-- 🌙 **다크 모드**: `@media (prefers-color-scheme: dark)` 자동 전환
-- 🔄 **디바운스 자동 재발권**: 게임 수·수동 수 변경 후 600ms 뒤 자동 재발권
-- 🔁 **`AbortController`**: 중복 요청 자동 취소 (빠른 클릭·입력 방지)
-- ⏳ 발권 중 버튼 비활성화 + `aria-busy` 상태 반영
-- ⚠️ 실패 시 `alert()` 대신 인라인 에러 박스 (`role="alert"`)
-- 🖨 인쇄 버튼 (`window.print()`) — `print-color-adjust: exact`로 공 색상 유지
-- ⌨️ 키보드 접근성: `:focus-visible` 전역 포커스 링
-- 🛡 **XSS 안전**: 모든 서버 데이터는 `textContent`로만 삽입
-- 🏎 **DOM 최적화**: `DocumentFragment`로 게임 목록 렌더링 리플로우 1회로 최소화
+리포트: `build/reports/tests/test/index.html`
+
+### 테스트 설계 메모
+
+- **MockMvc Standalone**: Spring Boot 4에서 `@WebMvcTest` 슬라이스가 제거됨에 따라 `MockMvcBuilders.standaloneSetup` + `@RestControllerAdvice` 직접 등록 방식으로 가볍게 검증.
+- **메서드 검증 AOP 미활성**: standalone 환경에서는 `@Validated` 메서드 검증 어드바이스가 동작하지 않으므로 `@Min/@Max` 위반 케이스는 통합 테스트에 위임.
+
+---
+
+## 📊 관측성
+
+### Custom Metrics (Micrometer)
+
+| 메트릭 | 타입 | 태그/퍼센타일 | 설명 |
+|---|---|---|---|
+| `lotto.api.fetch` | Timer | P50/P95/P99 | 동행복권 회차 조회 latency |
+| `lotto.api.fail` | Timer | — | 회차 조회 실패 횟수 |
+
+### Caffeine 통계 (`recordStats`)
+
+3개 캐시(`lottoDraws`/`latestDraw`/`historyWinners`) 모두 통계 활성화 → `/actuator/caches`에서 hit ratio · eviction count 확인 가능.
+
+```powershell
+curl http://localhost:8080/actuator/metrics/lotto.api.fetch
+curl http://localhost:8080/actuator/caches
+```
 
 ---
 
@@ -442,30 +536,50 @@ static/
 ### 빌드 & 실행
 
 ```powershell
-# 개발 모드 실행
-./gradlew.bat bootRun
+# dev 프로파일 (기본)
+.\gradlew.bat bootRun
 
-# 프로덕션 빌드
-./gradlew.bat clean build
+# prod 프로파일
+$env:SPRING_PROFILES_ACTIVE="prod"; .\gradlew.bat bootRun
+
+# 프로덕션 jar 빌드
+.\gradlew.bat clean build
+java -jar build/libs/ch01-1.0-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
-### 호출 예시 (PowerShell)
+### 호출 예시
 
 ```powershell
-# ⚡ 빠른 티켓 발권 (역대 당첨 미조회)
+# ⚡ 빠른 영수증 발권 (외부 API 미호출)
 curl "http://localhost:8080/api/lotto/ticket?games=5"
 
-# 🐢 역대 당첨 제외 번호 생성 (외부 API 호출 — 첫 호출 시 수 초 소요)
+# 🐢 역대 당첨 제외 발권 (첫 호출만 수 초)
+curl "http://localhost:8080/api/lotto/ticket?games=5&skipHistory=false"
+
+# 🧾 수동 1게임 + 자동 4게임
+curl "http://localhost:8080/api/lotto/ticket?games=5&manualNumbers=1,2,3,4,5,6"
+
+# 🎲 번호 생성 (역대 당첨 제외)
 curl "http://localhost:8080/api/lotto/generate?count=5"
 
-# 🧾 수동 1게임 + 자동 4게임으로 영수증 발권
-curl "http://localhost:8080/api/lotto/ticket?games=5&manual=1"
+# 📊 메트릭/캐시 통계 조회
+curl http://localhost:8080/actuator/metrics/lotto.api.fetch
+curl http://localhost:8080/actuator/caches
 ```
+
+---
+
+## 📜 라이선스
+
+학습/포트폴리오 목적의 개인 프로젝트 — 내부 사용 자유.
 
 ---
 
 <div align="center">
 
-**Built with ☕ Java 21 · 🌱 Spring Boot 4 · ⚡ Caffeine Cache · 🐘 Gradle 9**
+**Built with ☕ Java 21 · 🌱 Spring Boot 4 · 🐘 Gradle 9 · 📋 RFC 7807**
+
+🎰 *재미는 가볍게, 코드는 진지하게* 🎰
 
 </div>
+
