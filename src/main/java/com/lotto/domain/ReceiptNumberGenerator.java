@@ -16,11 +16,12 @@ public class ReceiptNumberGenerator {
     private static final int GROUP_COUNT = 6;
     private static final int GROUP_SIZE = 5;
     private static final int GROUP_BOUND = 100_000; // 5자리
+    private static final String GROUP_FORMAT = "%0" + GROUP_SIZE + "d";
 
     public String generate() {
         var random = ThreadLocalRandom.current();
         return IntStream.range(0, GROUP_COUNT)
-                .mapToObj(i -> String.format("%0" + GROUP_SIZE + "d", random.nextInt(GROUP_BOUND)))
+                .mapToObj(i -> String.format(GROUP_FORMAT, random.nextInt(GROUP_BOUND)))
                 .collect(Collectors.joining(" "));
     }
 }

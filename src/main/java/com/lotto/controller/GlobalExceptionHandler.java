@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -20,7 +21,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(ConstraintViolationException e) {
-        return problem(HttpStatus.BAD_REQUEST, "유효성 검사 실패", e.getMessage(), "lotto/validation");
+        // 메시지 예: "generateLotto.count: must be greater than or equal to 1"
+        // → "count: must be greater than or equal to 1" 처럼 메서드 prefix 제거
+        String detail = e.getConstraintViolations().stream()
+                .map(v -> {
+                    String path = v.getPropertyPath().toString();
+                    int dot = path.lastIndexOf('.');
+                    String field = dot >= 0 ? path.substring(dot + 1) : path;
+                    return field + ": " + v.getMessage();
+                })
+                .collect(Collectors.joining("; "));
+        if (detail.isEmpty()) {
+            detail = e.getMessage();
+        }
+        return problem(HttpStatus.BAD_REQUEST, "유효성 검사 실패", detail, "lotto/validation");
     }
 
     @ExceptionHandler(IllegalStateException.class)

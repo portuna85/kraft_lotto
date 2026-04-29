@@ -21,14 +21,19 @@ public class LottoDrawFinder {
 
     @Cacheable(cacheNames = "latestDraw")
     public int findLatestDraw() {
-        int step = properties.draw().searchStep();
         int low = properties.draw().searchStart();
-        int high = low + step;
+        int span = properties.draw().searchStep();
+        int high = low + span;
 
+        // 1) 상한을 지수적(2배)으로 확장 → O(log n) 호출로 첫 미존재 회차 발견.
+        //    예: searchStart=1100, searchStep=100 → 시도 회차 1200, 1400, 1800, 2600, ...
         while (isValid(high)) {
             low = high;
-            high += step;
+            span <<= 1;            // 2배 확장
+            high = low + span;
         }
+
+        // 2) [low, high] 구간을 이진 탐색으로 좁혀 마지막 유효 회차 확정
         while (low + 1 < high) {
             int mid = low + (high - low) / 2;
             if (isValid(mid)) {

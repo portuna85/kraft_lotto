@@ -28,17 +28,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LottoTicketService {
 
-    private static final String[] GAME_LABELS = buildLabels();
-
-    private static String[] buildLabels() {
-        String[] labels = new String[50];
-        for (int i = 0; i < 26; i++) {
-            labels[i] = String.valueOf((char) ('A' + i));
+    /**
+     * 게임 라벨 생성: A, B, ..., Z, AA, AB, ..., ZZ (총 26*27 = 702개 지원)
+     * 동행복권 영수증 표기 규칙(A~AX 등)을 일반화.
+     */
+    static String labelFor(int index) {
+        if (index < 0 || index >= 26 * 27) {
+            throw new IllegalArgumentException("게임 라벨 생성 가능 범위(0~701)를 벗어났습니다: " + index);
         }
-        for (int i = 26; i < 50; i++) {
-            labels[i] = "A" + (char) ('A' + (i - 26));
+        if (index < 26) {
+            return String.valueOf((char) ('A' + index));
         }
-        return labels;
+        int firstIdx = index / 26 - 1; // 26→AA(firstIdx=0), 52→BA(firstIdx=1), ...
+        int secondIdx = index % 26;
+        return "" + (char) ('A' + firstIdx) + (char) ('A' + secondIdx);
     }
 
     private final LottoService lottoService;
@@ -82,7 +85,7 @@ public class LottoTicketService {
         // 2) 게임 라벨/모드 부여 (앞쪽 manual 개를 수동으로)
         List<TicketGame> games = new ArrayList<>(totalGames);
         for (int i = 0; i < totalGames; i++) {
-            String label = GAME_LABELS[i];
+            String label = labelFor(i);
             PickMode mode = (i < manual) ? PickMode.MANUAL : PickMode.AUTO;
             games.add(new TicketGame(label, mode, picked.get(i)));
         }
