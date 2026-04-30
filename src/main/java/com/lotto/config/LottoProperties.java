@@ -15,7 +15,8 @@ public record LottoProperties(
         @Valid @NotNull Api api,
         @Valid @NotNull Draw draw,
         @Valid @NotNull Generator generator,
-        @Valid @NotNull Ticket ticket
+        @Valid @NotNull Ticket ticket,
+        @Valid @NotNull Cache cache
 ) {
     public record Api(
             @NotBlank String baseUrl,
@@ -43,11 +44,27 @@ public record LottoProperties(
             @Min(1) int maxCount,
             @Min(1) int numberMin,
             @Min(1) int numberMax,
-            @Min(1) int pickSize
+            @Min(1) int pickSize,
+            @Min(1) int safetyMultiplier
     ) {}
 
     public record Ticket(
             @Min(100) int pricePerGame,
             @Min(1) int claimValidityDays
     ) {}
+
+    /**
+     * Caffeine 캐시 사이즈/TTL 외부화. 각 캐시는 {@code RestClientConfig} 에서 등록되며
+     * 본 프로퍼티가 단일 진실 소스(SSoT)로서 운영 중 코드 수정 없이 튜닝 가능하다.
+     */
+    public record Cache(
+            @Valid @NotNull CacheSpec lottoDraws,
+            @Valid @NotNull CacheSpec latestDraw,
+            @Valid @NotNull CacheSpec historyWinners
+    ) {
+        public record CacheSpec(
+                @Min(1) long maximumSize,
+                @NotNull Duration expireAfterWrite
+        ) {}
+    }
 }

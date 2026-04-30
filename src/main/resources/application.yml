@@ -51,6 +51,22 @@ lotto:
     number-min: 1
     number-max: 45
     pick-size: 6
+    # 고유 번호 생성 시도 안전 한도 배수 (count * safety-multiplier 회 시도 후 실패 처리)
+    safety-multiplier: 1000
   ticket:
     price-per-game: 1000
     claim-validity-days: 365
+  # Caffeine 캐시 외부화 — 운영 튜닝 시 재컴파일 없이 조정
+  cache:
+    # 추첨 결과: 한번 확정되면 영구 불변 → 7일 TTL
+    lotto-draws:
+      maximum-size: 2000
+      expire-after-write: 7d
+    # 최신 회차: 매주 토요일 갱신 → 30분 TTL
+    latest-draw:
+      maximum-size: 1
+      expire-after-write: 30m
+    # 역대 당첨번호 Set: latestDraw 키 — 회차 변경 시까지 유지
+    history-winners:
+      maximum-size: 8
+      expire-after-write: 7d

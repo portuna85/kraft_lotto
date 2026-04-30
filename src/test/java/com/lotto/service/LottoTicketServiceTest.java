@@ -1,6 +1,6 @@
 package com.lotto.service;
 
-import com.lotto.config.LottoProperties;
+import com.lotto.TestFixtures;
 import com.lotto.domain.LottoNumbers;
 import com.lotto.domain.LottoTicket;
 import com.lotto.domain.PickMode;
@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,17 +22,6 @@ class LottoTicketServiceTest {
     private LottoService lottoService;
     private ReceiptNumberGenerator receipt;
     private LottoTicketService service;
-
-    private static LottoProperties props() {
-        return new LottoProperties(
-                new LottoProperties.Api("http://x", "m",
-                        Duration.ofSeconds(1), Duration.ofSeconds(1), 50,
-                        new LottoProperties.Api.Retry(3, Duration.ofMillis(200), 2.0, Duration.ofSeconds(2))),
-                new LottoProperties.Draw(1100, 100),
-                new LottoProperties.Generator(5, 50, 1, 45, 6),
-                new LottoProperties.Ticket(1000, 365)
-        );
-    }
 
     @BeforeEach
     void setUp() {
@@ -49,7 +37,7 @@ class LottoTicketServiceTest {
                     .toList();
             return new LottoService.GenerationResult(skip ? 0 : 1175, skip ? 0 : 1175, picks);
         });
-        service = new LottoTicketService(lottoService, receipt, props());
+        service = new LottoTicketService(lottoService, receipt, TestFixtures.defaultProperties());
     }
 
     @Test

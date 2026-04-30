@@ -5,7 +5,7 @@ import com.lotto.config.LottoProperties;
 import com.lotto.domain.LottoNumbers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +21,7 @@ import java.util.stream.IntStream;
  * 동행복권 서버 보호 정책 변경 시 재배포 없이 조정 가능하다.</p>
  */
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class LottoHistoryFetcher {
 

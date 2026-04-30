@@ -16,6 +16,14 @@
     <property name="APP_NAME" value="${APP_NAME:-lotto}"/>
     <property name="LOG_PATTERN_FILE"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{40} - %msg%n"/>
+    <!-- 레벨별 파일의 공통 롤링 정책(중복 제거) -->
+    <property name="LEVEL_FILE_MAX_SIZE" value="10MB"/>
+    <property name="LEVEL_FILE_MAX_HISTORY" value="30"/>
+    <property name="LEVEL_FILE_TOTAL_CAP" value="1GB"/>
+    <!-- 통합(ALL) 파일은 다른 정책: 더 빠른 회전, 짧은 보관 -->
+    <property name="ALL_FILE_MAX_SIZE" value="20MB"/>
+    <property name="ALL_FILE_MAX_HISTORY" value="14"/>
+    <property name="ALL_FILE_TOTAL_CAP" value="2GB"/>
 
     <!-- 레벨별 단독 파일 Appender 생성 매크로(중복 정의로 정적 작성) -->
     <appender name="FILE_TRACE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -31,9 +39,9 @@
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-trace.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
+            <maxFileSize>${LEVEL_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${LEVEL_FILE_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LEVEL_FILE_TOTAL_CAP}</totalSizeCap>
         </rollingPolicy>
     </appender>
 
@@ -50,9 +58,9 @@
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-debug.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
+            <maxFileSize>${LEVEL_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${LEVEL_FILE_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LEVEL_FILE_TOTAL_CAP}</totalSizeCap>
         </rollingPolicy>
     </appender>
 
@@ -69,9 +77,9 @@
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-info.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
+            <maxFileSize>${LEVEL_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${LEVEL_FILE_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LEVEL_FILE_TOTAL_CAP}</totalSizeCap>
         </rollingPolicy>
     </appender>
 
@@ -88,9 +96,9 @@
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-warn.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
+            <maxFileSize>${LEVEL_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${LEVEL_FILE_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LEVEL_FILE_TOTAL_CAP}</totalSizeCap>
         </rollingPolicy>
     </appender>
 
@@ -107,9 +115,9 @@
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
+            <maxFileSize>${LEVEL_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${LEVEL_FILE_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LEVEL_FILE_TOTAL_CAP}</totalSizeCap>
         </rollingPolicy>
     </appender>
 
@@ -122,9 +130,9 @@
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/archive/${APP_NAME}-all.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>20MB</maxFileSize>
-            <maxHistory>14</maxHistory>
-            <totalSizeCap>2GB</totalSizeCap>
+            <maxFileSize>${ALL_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${ALL_FILE_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${ALL_FILE_TOTAL_CAP}</totalSizeCap>
         </rollingPolicy>
     </appender>
 
