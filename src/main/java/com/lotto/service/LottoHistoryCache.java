@@ -4,7 +4,7 @@ import com.lotto.domain.LottoNumbers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.Set;
 
@@ -17,7 +17,7 @@ import java.util.Set;
  * 같은 회차 기준 요청을 단일 lookup 으로 단축한다.</p>
  */
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class LottoHistoryCache {
 

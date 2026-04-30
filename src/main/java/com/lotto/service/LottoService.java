@@ -1,5 +1,6 @@
 package com.lotto.service;
 
+import com.lotto.config.LottoProperties;
 import com.lotto.domain.LottoNumberGenerator;
 import com.lotto.domain.LottoNumbers;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class LottoService {
     private final LottoDrawFinder lottoDrawFinder;
     private final LottoHistoryCache lottoHistoryCache;
     private final LottoNumberGenerator lottoNumberGenerator;
+    private final LottoProperties properties;
 
     /**
      * 역대 당첨번호와 겹치지 않는 고유 번호 {@code count}개를 생성한다.
@@ -53,14 +55,18 @@ public class LottoService {
         }
         int latestDraw = lottoDrawFinder.findLatestDraw();
         Set<LottoNumbers> historicalWinners = lottoHistoryCache.getOrFetch(latestDraw);
-        List<LottoNumbers> generated = generateUnique(count, historicalWinners);
+        List<LottoNumbers> generated = generateAvoidingHistory(count, historicalWinners);
         return new GenerationResult(latestDraw, historicalWinners.size(), generated);
     }
 
-    private List<LottoNumbers> generateUnique(int count, Set<LottoNumbers> historicalWinners) {
+    /**
+     * 역대 당첨번호와 겹치지 않는 조합을 {@code count}개가 모일 때까지 시도한다.
+     * 안전 한도(시도 횟수 = {@code count * safetyMultiplier})는 설정으로 외부화되어 있다.
+     */
+    private List<LottoNumbers> generateAvoidingHistory(int count, Set<LottoNumbers> historicalWinners) {
         Set<LottoNumbers> generated = new LinkedHashSet<>();
         int attempts = 0;
-        int safetyLimit = count * 1000;
+        int safetyLimit = count * properties.generator().safetyMultiplier();
         while (generated.size() < count) {
             if (++attempts > safetyLimit) {
                 throw new IllegalStateException("고유 번호 생성 한도를 초과했습니다.");

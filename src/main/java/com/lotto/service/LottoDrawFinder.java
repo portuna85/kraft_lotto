@@ -5,14 +5,14 @@ import com.lotto.config.LottoProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 /**
  * 최신 회차 번호를 이진 탐색으로 찾는다 (SRP).
  * 결과는 30분간 캐시 — 매주 토요일 추첨 주기에 맞춰 불필요한 반복 탐색을 방지.
  */
 @Slf4j
-@Component
+@Service
 @RequiredArgsConstructor
 public class LottoDrawFinder {
 

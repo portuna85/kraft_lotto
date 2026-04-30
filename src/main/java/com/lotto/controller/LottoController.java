@@ -4,6 +4,7 @@ import com.lotto.config.LottoProperties;
 import com.lotto.controller.dto.GenerateLottoResponse;
 import com.lotto.controller.dto.TicketResponse;
 import com.lotto.domain.LottoNumbers;
+import com.lotto.domain.ManualNumberParser;
 import com.lotto.service.LottoService;
 import com.lotto.service.LottoTicketService;
 import jakarta.validation.constraints.Max;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,20 +61,9 @@ public class LottoController {
             @RequestParam(required = false, defaultValue = "true") boolean skipHistory
     ) {
         int total = Optional.ofNullable(games).orElseGet(() -> properties.generator().defaultCount());
-        List<LottoNumbers> manualParsed = parseManualNumbers(manualNumbers);
+        List<LottoNumbers> manualParsed = ManualNumberParser.parse(manualNumbers);
         return TicketResponse.from(
                 lottoTicketService.issue(total, manual, manualParsed, skipHistory)
         );
-    }
-
-    /** 입력된 수동 번호 문자열들을 도메인 객체로 변환한다. {@link LottoNumbers#parse}에 위임. */
-    private static List<LottoNumbers> parseManualNumbers(List<String> raw) {
-        if (raw == null || raw.isEmpty()) return List.of();
-        List<LottoNumbers> parsed = new ArrayList<>(raw.size());
-        for (String entry : raw) {
-            if (entry == null || entry.isBlank()) continue;
-            parsed.add(LottoNumbers.parse(entry));
-        }
-        return parsed;
     }
 }

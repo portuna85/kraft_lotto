@@ -11,7 +11,6 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.net.http.HttpClient;
-import java.time.Duration;
 
 @Configuration
 @EnableCaching
@@ -34,30 +33,26 @@ public class RestClientConfig {
                 .build();
     }
 
+    /**
+     * Caffeine 기반 캐시 매니저. 사이즈/TTL 은 {@link LottoProperties.Cache} 에서 외부 주입 받아
+     * 코드 수정 없이 운영 튜닝 가능하도록 일원화했다.
+     */
     @Bean
-    public CacheManager cacheManager() {
+    public CacheManager cacheManager(LottoProperties properties) {
         CaffeineCacheManager manager = new CaffeineCacheManager();
-        // 추첨 결과는 한번 확정되면 영구 불변 → 7일 TTL (재시작 빈도 고려)
-        manager.registerCustomCache("lottoDraws",
-                Caffeine.newBuilder()
-                        .maximumSize(2000)
-                        .expireAfterWrite(Duration.ofDays(7))
-                        .recordStats()
-                        .build());
-        // 최신 회차는 매주 토요일 갱신 → 30분 TTL
-        manager.registerCustomCache("latestDraw",
-                Caffeine.newBuilder()
-                        .maximumSize(1)
-                        .expireAfterWrite(Duration.ofMinutes(30))
-                        .recordStats()
-                        .build());
-        // 역대 당첨번호 Set 캐시 (latestDraw 키) → 회차 변경 시까지 유지
-        manager.registerCustomCache("historyWinners",
-                Caffeine.newBuilder()
-                        .maximumSize(8)
-                        .expireAfterWrite(Duration.ofDays(7))
-                        .recordStats()
-                        .build());
+        LottoProperties.Cache cache = properties.cache();
+        manager.registerCustomCache("lottoDraws", buildCache(cache.lottoDraws()));
+        manager.registerCustomCache("latestDraw", buildCache(cache.latestDraw()));
+        manager.registerCustomCache("historyWinners", buildCache(cache.historyWinners()));
         return manager;
+    }
+
+    private static com.github.benmanes.caffeine.cache.Cache<Object, Object> buildCache(
+            LottoProperties.Cache.CacheSpec spec) {
+        return Caffeine.newBuilder()
+                .maximumSize(spec.maximumSize())
+                .expireAfterWrite(spec.expireAfterWrite())
+                .recordStats()
+                .build();
     }
 }

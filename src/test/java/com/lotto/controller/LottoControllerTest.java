@@ -1,6 +1,6 @@
 package com.lotto.controller;
 
-import com.lotto.config.LottoProperties;
+import com.lotto.TestFixtures;
 import com.lotto.domain.LottoNumbers;
 import com.lotto.domain.LottoTicket;
 import com.lotto.domain.PickMode;
@@ -15,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,20 +42,9 @@ class LottoControllerTest {
 
     private MockMvc mvc;
 
-    private static LottoProperties props() {
-        return new LottoProperties(
-                new LottoProperties.Api("http://x", "m",
-                        Duration.ofSeconds(1), Duration.ofSeconds(1), 50,
-                        new LottoProperties.Api.Retry(3, Duration.ofMillis(200), 2.0, Duration.ofSeconds(2))),
-                new LottoProperties.Draw(1100, 100),
-                new LottoProperties.Generator(5, 50, 1, 45, 6),
-                new LottoProperties.Ticket(1000, 365)
-        );
-    }
-
     @BeforeEach
     void setUp() {
-        var controller = new LottoController(lottoService, lottoTicketService, props());
+        var controller = new LottoController(lottoService, lottoTicketService, TestFixtures.defaultProperties());
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
